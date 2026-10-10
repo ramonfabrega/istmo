@@ -5,6 +5,7 @@ import {
   type ReportSound,
   type SoundMode,
 } from "./report-sound";
+import { InstallButton } from "./AppLifecycle";
 import { usePushNotifications } from "./push-notifications";
 
 function Toggle({
@@ -201,6 +202,7 @@ export default function Notifications({
               Notifications need a supported browser and HTTPS.
             </p>
           )}
+          {!push.supported && <InstallButton />}
           <details className="notification-options">
             <summary>Notification options</summary>
             <Filters

@@ -55,7 +55,7 @@ export function usePushNotifications() {
       safeWrite("istmo-push-mag", mag);
       setMessage("Saved. New qualifying reports will be sent to this device.");
     } catch (e) {
-      setMessage(String(e));
+      setMessage(e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(false);
     }
@@ -72,7 +72,7 @@ export function usePushNotifications() {
       const registration = await navigator.serviceWorker.getRegistration();
       await (await registration?.pushManager.getSubscription())?.unsubscribe();
     } catch (error) {
-      setMessage(String(error));
+      setMessage(error instanceof Error ? error.message : String(error));
     } finally {
       setBusy(false);
     }
@@ -82,9 +82,11 @@ export function usePushNotifications() {
     setBusy(true);
     try {
       await post("test", device);
-      setMessage("Test queued. Check this device for a notification.");
+      setMessage(
+        "Accepted by the push service. Check your notifications; Focus or system settings may hide banners.",
+      );
     } catch (error) {
-      setMessage(String(error));
+      setMessage(error instanceof Error ? error.message : String(error));
     } finally {
       setBusy(false);
     }
@@ -94,7 +96,8 @@ export function usePushNotifications() {
     setSource,
     magnitude: mag,
     setMagnitude: setMag,
-    enabled: Boolean(device),
+    enabled:
+      Boolean(device) && supported && Notification.permission === "granted",
     message,
     busy,
     supported,

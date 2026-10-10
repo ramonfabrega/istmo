@@ -20,14 +20,30 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 self.addEventListener("fetch", (event) => {
-  const req = event.request,
-    url = new URL(req.url);
+  const req = event.request;
+  const url = new URL(req.url);
   if (
     req.method !== "GET" ||
     url.origin !== location.origin ||
     url.pathname.startsWith("/api/")
   )
     return;
+  // Hashed build assets are immutable. Keep the shell network-first so a
+  // reopened app gets the current release, with offline fallback.
+  if (url.pathname.startsWith("/assets/")) {
+    event.respondWith(
+      caches.match(req).then(
+        (cached) =>
+          cached ||
+          fetch(req).then(async (response) => {
+            if (response.ok)
+              await (await caches.open(CACHE)).put(req, response.clone());
+            return response;
+          }),
+      ),
+    );
+    return;
+  }
   event.respondWith(
     fetch(req)
       .then((response) => {

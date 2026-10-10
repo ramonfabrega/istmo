@@ -23,6 +23,7 @@ import Waveform from "./Waveform";
 import Family from "./Family";
 import Notifications from "./Notifications";
 import CircleMap from "./CircleMap";
+import { InstallButton, UpdateNotice } from "./AppLifecycle";
 import { savedCircles, type CircleSession } from "./circles";
 import { useReportSound } from "./report-sound";
 const demoMode =
@@ -266,199 +267,196 @@ export default function App() {
             <button onClick={() => void refresh()}>Retry</button>
           </div>
         )}
-        {view === "observatory" ? (
-          <main
-            className={`observatory ${activityOpen ? "activity-open" : ""}`}
-          >
-            <div className="visual-column">
-              <CircleMap
-                session={circleSession}
-                onClose={() => setCircleSession(null)}
-              >
-                {(layer) => (
-                  <Globe
-                    circle={layer}
-                    onCircleToggle={toggleCircle}
-                    onDismiss={() => setSelected(null)}
-                    reports={layer ? [] : filtered}
-                    stations={visibleStations}
-                    selected={selected}
-                    onSelect={setSelected}
-                    focusRequest={focusRequest}
-                    onStation={(s) => setStationId(s.id)}
-                  />
-                )}
-              </CircleMap>
-              {station && <Waveform station={station} />}
+        <main
+          hidden={view !== "observatory"}
+          className={`observatory ${activityOpen ? "activity-open" : ""}`}
+        >
+          <div className="visual-column">
+            <CircleMap
+              session={circleSession}
+              onClose={() => setCircleSession(null)}
+            >
+              {(layer) => (
+                <Globe
+                  circle={layer}
+                  onCircleToggle={toggleCircle}
+                  onDismiss={() => setSelected(null)}
+                  reports={layer ? [] : filtered}
+                  stations={visibleStations}
+                  selected={selected}
+                  onSelect={setSelected}
+                  focusRequest={focusRequest}
+                  onStation={(s) => setStationId(s.id)}
+                />
+              )}
+            </CircleMap>
+            {station && <Waveform station={station} />}
+            <button
+              className="latest-ticker"
+              onClick={() => {
+                if (matchMedia("(max-width:760px)").matches)
+                  setActivityOpen(true);
+                else if (filtered[0]) focusReport(filtered[0]);
+              }}
+              aria-label="Open recent activity"
+            >
+              <span className="ticker-label">
+                <Activity size={14} />
+                Latest report
+              </span>
+              {filtered[0] ? (
+                <>
+                  <b style={{ color: magnitudeColor(filtered[0].magnitude) }}>
+                    M {filtered[0].magnitude.toFixed(1)}
+                  </b>
+                  <span className="ticker-place">
+                    {filtered[0].place.replace(/^Localizado en /, "")}
+                  </span>
+                  <time>{ago(filtered[0].occurred_at)}</time>
+                </>
+              ) : (
+                <span>No reports in this view</span>
+              )}
+              <ChevronRight size={16} />
+            </button>
+          </div>
+          <aside className="activity-panel">
+            <div className="activity-heading">
+              <div>
+                <span className="eyeline">Published observations</span>
+                <h2>
+                  Recent activity <span>{filtered.length}</span>
+                </h2>
+              </div>
               <button
-                className="latest-ticker"
-                onClick={() => {
-                  if (matchMedia("(max-width:760px)").matches)
-                    setActivityOpen(true);
-                  else if (filtered[0]) focusReport(filtered[0]);
-                }}
-                aria-label="Open recent activity"
+                aria-label="Refresh earthquake reports"
+                className={busy ? "spinning" : ""}
+                onClick={() => void refresh()}
               >
-                <span className="ticker-label">
-                  <Activity size={14} />
-                  Latest report
-                </span>
-                {filtered[0] ? (
-                  <>
-                    <b style={{ color: magnitudeColor(filtered[0].magnitude) }}>
-                      M {filtered[0].magnitude.toFixed(1)}
-                    </b>
-                    <span className="ticker-place">
-                      {filtered[0].place.replace(/^Localizado en /, "")}
-                    </span>
-                    <time>{ago(filtered[0].occurred_at)}</time>
-                  </>
-                ) : (
-                  <span>No reports in this view</span>
-                )}
-                <ChevronRight size={16} />
+                <RefreshCw size={16} />
               </button>
             </div>
-            <aside className="activity-panel">
-              <div className="activity-heading">
-                <div>
-                  <span className="eyeline">Published observations</span>
-                  <h2>
-                    Recent activity <span>{filtered.length}</span>
-                  </h2>
+            <div className="filters">
+              <select
+                aria-label="Report time range"
+                value={hours}
+                onChange={(e) => setHours(Number(e.target.value))}
+              >
+                <option value={1}>Past hour</option>
+                <option value={6}>Past 6 hours</option>
+                <option value={24}>Past 24 hours</option>
+                <option value={168}>Past 7 days</option>
+              </select>
+              <select
+                aria-label="Minimum magnitude"
+                value={magnitude}
+                onChange={(e) => setMagnitude(Number(e.target.value))}
+              >
+                <option value={0}>All magnitudes</option>
+                <option value={3}>M 3+</option>
+                <option value={4}>M 4+</option>
+                <option value={5}>M 5+</option>
+                <option value={6}>M 6+</option>
+              </select>
+            </div>
+            <div className="source-tabs">
+              <button
+                className={source === "all" ? "active" : ""}
+                onClick={() => setSource("all")}
+              >
+                All sources
+              </button>
+              <button
+                className={source === "up" ? "active" : ""}
+                onClick={() => setSource("up")}
+              >
+                UP
+              </button>
+              <button
+                className={source === "usgs" ? "active" : ""}
+                onClick={() => setSource("usgs")}
+              >
+                USGS
+              </button>
+              <select
+                aria-label="Geographic scope"
+                value={scope}
+                onChange={(e) => setScope(e.target.value)}
+              >
+                <option value="panama">Panama</option>
+                <option value="world">World</option>
+              </select>
+            </div>
+            <p className="report-note">
+              Agency reports, not unique event counts.
+            </p>
+            <div className="event-list">
+              {filtered.length ? (
+                filtered.map((r) => (
+                  <button
+                    className={`event-row ${selected?.id === r.id ? "active" : ""}`}
+                    key={r.id}
+                    onClick={() => focusReport(r)}
+                  >
+                    <span
+                      className={`magnitude ${r.magnitude >= 5 ? "large" : ""}`}
+                      style={{ color: magnitudeColor(r.magnitude) }}
+                    >
+                      {r.magnitude.toFixed(1)}
+                      <small>{r.magnitude_type || "M"}</small>
+                    </span>
+                    <span className="event-content">
+                      <strong>{r.place.replace(/^Localizado en /, "")}</strong>
+                      <span>
+                        <time title={dateTime(r.occurred_at)}>
+                          {ago(r.occurred_at)}
+                        </time>{" "}
+                        <i /> {localTime(r.occurred_at)}
+                      </span>
+                      <small>
+                        <b>{r.source === "up" ? "UP" : "USGS"}</b> · {r.status}
+                        {r.revision > 1 ? ` · revision ${r.revision}` : ""}
+                      </small>
+                    </span>
+                    <ChevronRight size={14} />
+                  </button>
+                ))
+              ) : (
+                <div className="empty-state">
+                  <Activity size={28} />
+                  <h3>No reports in this view</h3>
+                  <p>
+                    {sources.some((s) => s.last_success)
+                      ? "Try a wider time range or lower magnitude."
+                      : "The collector has not received data yet. Source health is available in Sources."}
+                  </p>
+                  <button
+                    onClick={() => {
+                      setMagnitude(0);
+                      setHours(168);
+                    }}
+                  >
+                    Widen filters
+                  </button>
                 </div>
-                <button
-                  aria-label="Refresh earthquake reports"
-                  className={busy ? "spinning" : ""}
-                  onClick={() => void refresh()}
-                >
-                  <RefreshCw size={16} />
-                </button>
-              </div>
-              <div className="filters">
-                <select
-                  aria-label="Report time range"
-                  value={hours}
-                  onChange={(e) => setHours(Number(e.target.value))}
-                >
-                  <option value={1}>Past hour</option>
-                  <option value={6}>Past 6 hours</option>
-                  <option value={24}>Past 24 hours</option>
-                  <option value={168}>Past 7 days</option>
-                </select>
-                <select
-                  aria-label="Minimum magnitude"
-                  value={magnitude}
-                  onChange={(e) => setMagnitude(Number(e.target.value))}
-                >
-                  <option value={0}>All magnitudes</option>
-                  <option value={3}>M 3+</option>
-                  <option value={4}>M 4+</option>
-                  <option value={5}>M 5+</option>
-                  <option value={6}>M 6+</option>
-                </select>
-              </div>
-              <div className="source-tabs">
-                <button
-                  className={source === "all" ? "active" : ""}
-                  onClick={() => setSource("all")}
-                >
-                  All sources
-                </button>
-                <button
-                  className={source === "up" ? "active" : ""}
-                  onClick={() => setSource("up")}
-                >
-                  UP
-                </button>
-                <button
-                  className={source === "usgs" ? "active" : ""}
-                  onClick={() => setSource("usgs")}
-                >
-                  USGS
-                </button>
-                <select
-                  aria-label="Geographic scope"
-                  value={scope}
-                  onChange={(e) => setScope(e.target.value)}
-                >
-                  <option value="panama">Panama</option>
-                  <option value="world">World</option>
-                </select>
-              </div>
-              <p className="report-note">
-                Agency reports, not unique event counts.
-              </p>
-              <div className="event-list">
-                {filtered.length ? (
-                  filtered.map((r) => (
-                    <button
-                      className={`event-row ${selected?.id === r.id ? "active" : ""}`}
-                      key={r.id}
-                      onClick={() => focusReport(r)}
-                    >
-                      <span
-                        className={`magnitude ${r.magnitude >= 5 ? "large" : ""}`}
-                        style={{ color: magnitudeColor(r.magnitude) }}
-                      >
-                        {r.magnitude.toFixed(1)}
-                        <small>{r.magnitude_type || "M"}</small>
-                      </span>
-                      <span className="event-content">
-                        <strong>
-                          {r.place.replace(/^Localizado en /, "")}
-                        </strong>
-                        <span>
-                          <time title={dateTime(r.occurred_at)}>
-                            {ago(r.occurred_at)}
-                          </time>{" "}
-                          <i /> {localTime(r.occurred_at)}
-                        </span>
-                        <small>
-                          <b>{r.source === "up" ? "UP" : "USGS"}</b> ·{" "}
-                          {r.status}
-                          {r.revision > 1 ? ` · revision ${r.revision}` : ""}
-                        </small>
-                      </span>
-                      <ChevronRight size={14} />
-                    </button>
-                  ))
-                ) : (
-                  <div className="empty-state">
-                    <Activity size={28} />
-                    <h3>No reports in this view</h3>
-                    <p>
-                      {sources.some((s) => s.last_success)
-                        ? "Try a wider time range or lower magnitude."
-                        : "The collector has not received data yet. Source health is available in Sources."}
-                    </p>
-                    <button
-                      onClick={() => {
-                        setMagnitude(0);
-                        setHours(168);
-                      }}
-                    >
-                      Widen filters
-                    </button>
-                  </div>
-                )}
-              </div>
-              <footer className="source-summary">
-                {sources.map((s) => (
-                  <span key={s.id}>
-                    <i
-                      className={`dot ${s.error || !s.last_success || clock - s.last_success > 180000 ? "amber" : "teal"}`}
-                    />
-                    {s.id.toUpperCase()}{" "}
-                    <b>
-                      {s.last_success ? ago(s.last_success) : "Awaiting data"}
-                    </b>
-                  </span>
-                ))}
-              </footer>
-            </aside>
-          </main>
-        ) : view === "people" ? (
+              )}
+            </div>
+            <footer className="source-summary">
+              {sources.map((s) => (
+                <span key={s.id}>
+                  <i
+                    className={`dot ${s.error || !s.last_success || clock - s.last_success > 180000 ? "amber" : "teal"}`}
+                  />
+                  {s.id.toUpperCase()}{" "}
+                  <b>
+                    {s.last_success ? ago(s.last_success) : "Awaiting data"}
+                  </b>
+                </span>
+              ))}
+            </footer>
+          </aside>
+        </main>
+        {view === "people" ? (
           <Family
             onShowMap={(session) => {
               setFocusRequest(null);
@@ -468,7 +466,7 @@ export default function App() {
               setView("observatory");
             }}
           />
-        ) : (
+        ) : view === "sources" ? (
           <main className="sources-page">
             <header className="sources-heading">
               <span className="eyeline">Data connections</span>
@@ -600,7 +598,8 @@ export default function App() {
               Reports keep their agency’s values and revisions.
             </footer>
           </main>
-        )}
+        ) : null}
+        <UpdateNotice />
       </div>
       {showNotifications && (
         <Notifications
@@ -735,6 +734,8 @@ export default function App() {
               it to your Home Screen. Enable notifications from the bell to
               receive reports when the app is closed.
             </p>
+            <InstallButton />
+            <button onClick={() => location.reload()}>Reload Istmo</button>
             <button className="primary" onClick={() => setShowInfo(false)}>
               <Check size={15} />
               Got it

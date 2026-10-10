@@ -68,7 +68,7 @@ export async function enqueueReport(
       .run();
   }
 }
-export async function drainPush(env: Env) {
+export async function drainPush(env: Env, onlyJob?: string) {
   if (!env.VAPID_PUBLIC_KEY || !env.VAPID_PRIVATE_KEY || !env.VAPID_SUBJECT)
     return;
   await env.DB.prepare(
@@ -77,9 +77,9 @@ export async function drainPush(env: Env) {
     .bind(Date.now())
     .run();
   const jobs = await env.DB.prepare(
-    "SELECT o.*,s.subscription FROM push_outbox o JOIN push_subscriptions s ON o.subscription_id=s.id WHERE o.status='pending' AND o.next_attempt<=? LIMIT 25",
+    "SELECT o.*,s.subscription FROM push_outbox o JOIN push_subscriptions s ON o.subscription_id=s.id WHERE o.status='pending' AND o.next_attempt<=? AND (? IS NULL OR o.id=?) LIMIT 25",
   )
-    .bind(Date.now())
+    .bind(Date.now(), onlyJob ?? null, onlyJob ?? null)
     .all<{
       id: string;
       subscription_id: string;
@@ -103,7 +103,7 @@ export async function drainPush(env: Env) {
       );
       const res = await fetch(subscription.endpoint, {
         ...payload,
-        redirect: "error",
+        redirect: "manual",
         signal: AbortSignal.timeout(10000),
       });
       if (res.status === 404 || res.status === 410) {
@@ -186,7 +186,7 @@ app.post("/unsubscribe", async (c) => {
   )
     .bind(b.id, await digest(b.token))
     .first();
-  if (!sub) return c.json({ error: "Subscription not found" }, 404);
+  if (!sub) return c.json({ ok: true });
   await c.env.DB.batch([
     c.env.DB.prepare("DELETE FROM push_outbox WHERE subscription_id=?").bind(
       b.id,
@@ -205,11 +205,12 @@ app.post("/test", async (c) => {
     .bind(b.id, await digest(b.token))
     .first();
   if (!sub) return c.json({ error: "Subscription not found" }, 404);
+  const jobId = `test:${b.id}:${Math.floor(Date.now() / 60000)}`;
   await c.env.DB.prepare(
     "INSERT OR IGNORE INTO push_outbox(id,subscription_id,payload,next_attempt,expires_at) VALUES(?,?,?,?,?)",
   )
     .bind(
-      `test:${b.id}:${Math.floor(Date.now() / 60000)}`,
+      jobId,
       b.id,
       JSON.stringify({
         title: "Istmo is connected",
@@ -221,7 +222,30 @@ app.post("/test", async (c) => {
       Date.now() + 300000,
     )
     .run();
-  await drainPush(c.env);
-  return c.json({ queued: true });
+  await drainPush(c.env, jobId);
+  const result = await c.env.DB.prepare(
+    "SELECT status,last_error FROM push_outbox WHERE id=?",
+  )
+    .bind(jobId)
+    .first<{ status: string; last_error: string | null }>();
+  if (!result)
+    return c.json(
+      {
+        error:
+          "This push subscription expired. Turn notifications off and on to reconnect.",
+      },
+      410,
+    );
+  if (result.last_error)
+    return c.json({ error: `Delivery failed: ${result.last_error}` }, 502);
+  if (result.status !== "accepted")
+    return c.json(
+      {
+        error:
+          "Push delivery is not configured or is still pending. Please try again shortly.",
+      },
+      503,
+    );
+  return c.json({ accepted: true });
 });
 export default app;
