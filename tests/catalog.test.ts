@@ -90,6 +90,21 @@ describe("UP snapshot reconciliation", () => {
     expect(plan.rows[0].previous).toBeUndefined();
     expect(plan.withdrawn).toEqual([]);
   });
+  it.each([{ occurred_at: 111000 }, { latitude: 8.6 }, { magnitude: 5.4 }])(
+    "keeps replacements outside the correction bounds separate: %j",
+    (extra) => {
+      expect(
+        reconcileUP([row(100000, extra)], [saved(99000)]).rows[0].previous,
+      ).toBeUndefined();
+    },
+  );
+  it("does not resolve ambiguity merely because one candidate is closer", () => {
+    const plan = reconcileUP(
+      [row(100000)],
+      [saved(99000), saved(92000, { latitude: 8.3 })],
+    );
+    expect(plan.rows[0].previous).toBeUndefined();
+  });
   it("matches a returning withdrawn row without making a new identity", () => {
     expect(
       reconcileUP([row(100000)], [saved(100000, { withdrawn_at: 2 })]).rows[0]

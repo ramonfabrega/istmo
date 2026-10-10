@@ -1,5 +1,10 @@
 import { digest } from "./crypto";
-import { reconcileUP, newReportTime, type StoredReport } from "./catalog";
+import {
+  reconcileUP,
+  newReportTime,
+  UP_CORRECTION_TIME_MS,
+  type StoredReport,
+} from "./catalog";
 import type { Env } from "./env";
 import { parseUP, parseUSGS, type ParsedReport } from "./parsers";
 import { enqueueReport } from "./push";
@@ -19,7 +24,8 @@ export async function storeReports(
     raw,
   );
   const oldest =
-    Math.min(Date.now(), ...reports.map((r) => r.occurred_at)) - 5000;
+    Math.min(Date.now(), ...reports.map((r) => r.occurred_at)) -
+    UP_CORRECTION_TIME_MS;
   const sourceState = await env.DB.prepare(
     "SELECT last_success FROM sources WHERE id=?",
   )

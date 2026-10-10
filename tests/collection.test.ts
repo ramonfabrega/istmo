@@ -75,3 +75,142 @@ it("persists bootstrap, corrections, incremental arrivals and withdrawals withou
     sqlite.close();
   }
 });
+
+it.each([
+  {
+    name: "tonosi",
+    first: 1791615082073,
+    correction: 1791615502090,
+    original: 1791614870000,
+    corrected: 1791614869000,
+  },
+  {
+    name: "las-tablas",
+    first: 1791613769177,
+    correction: 1791613829393,
+    original: 1791613634000,
+    corrected: 1791613631000,
+  },
+  {
+    name: "offshore",
+    first: 1791614482077,
+    correction: 1791614542278,
+    original: 1791613792000,
+    corrected: 1791613801000,
+  },
+])(
+  "keeps the archived $name relocation as a revision without another notification",
+  async ({ name, first, correction, original, corrected }) => {
+    const { readFileSync } = await import("node:fs");
+    const before = readFileSync(
+      `tests/fixtures/up-corrections/${name}-before.html`,
+      "utf8",
+    );
+    const after = readFileSync(
+      `tests/fixtures/up-corrections/${name}-after.html`,
+      "utf8",
+    );
+    vi.useFakeTimers();
+    const { sqlite, env } = database();
+    try {
+      sqlite
+        .prepare("UPDATE sources SET last_success=? WHERE id='up'")
+        .run(first - 60000);
+      sqlite
+        .prepare(
+          "INSERT INTO push_subscriptions(id,token_hash,subscription,source,min_magnitude,created_at) VALUES('test','test','{}','up',0,?)",
+        )
+        .run(first);
+      vi.setSystemTime(first);
+      await storeReports(env, "up", before);
+      const notifications = sqlite
+        .prepare("SELECT count(*) AS n FROM push_outbox")
+        .get()?.n;
+      // The real collector kept polling unchanged snapshots between revisions.
+      vi.setSystemTime(correction - 60000);
+      await storeReports(env, "up", before);
+      vi.setSystemTime(correction);
+      await storeReports(env, "up", after);
+      const records = sqlite
+        .prepare("SELECT * FROM reports WHERE occurred_at BETWEEN ? AND ?")
+        .all(Math.min(original, corrected), Math.max(original, corrected));
+      expect(records).toHaveLength(1);
+      expect(records[0]).toMatchObject({
+        id: `up:${original}`,
+        occurred_at: corrected,
+        revision: 2,
+        first_seen: first,
+        new_report_at: first,
+        withdrawn_at: null,
+      });
+      expect(
+        sqlite
+          .prepare(
+            "SELECT count(*) AS n FROM report_revisions WHERE report_id=?",
+          )
+          .get(`up:${original}`)?.n,
+      ).toBe(2);
+      expect(
+        sqlite.prepare("SELECT count(*) AS n FROM push_outbox").get()?.n,
+      ).toBe(notifications);
+    } finally {
+      sqlite.close();
+    }
+  },
+);
+
+it("loads a correction candidate nine seconds before the oldest incoming row", async () => {
+  vi.useFakeTimers();
+  const first = Date.parse("2026-10-10T05:00:00Z");
+  const origin = first - 60000;
+  const { sqlite, env } = database();
+  try {
+    vi.setSystemTime(first);
+    await storeReports(env, "up", html([origin]));
+    vi.setSystemTime(first + 60000);
+    await storeReports(env, "up", html([origin + 9000]));
+    expect(sqlite.prepare("SELECT id,revision FROM reports").all()).toEqual([
+      { id: `up:${origin}`, revision: 2 },
+    ]);
+  } finally {
+    sqlite.close();
+  }
+});
+
+it("does not infer identity for the much larger archived David/Tonosí change", async () => {
+  const { readFileSync } = await import("node:fs");
+  vi.useFakeTimers();
+  const { sqlite, env } = database();
+  try {
+    vi.setSystemTime(1791611909396);
+    await storeReports(
+      env,
+      "up",
+      readFileSync(
+        "tests/fixtures/up-corrections/uncertain-before.html",
+        "utf8",
+      ),
+    );
+    vi.setSystemTime(1791611969631);
+    await storeReports(
+      env,
+      "up",
+      readFileSync(
+        "tests/fixtures/up-corrections/uncertain-after.html",
+        "utf8",
+      ),
+    );
+    expect(
+      sqlite
+        .prepare(
+          "SELECT id,revision,withdrawn_at FROM reports WHERE occurred_at BETWEEN 1791611787000 AND 1791611804000 ORDER BY occurred_at",
+        )
+        .all(),
+    ).toEqual([
+      { id: "up:1791611787000", revision: 1, withdrawn_at: 1791611969631 },
+      { id: "up:1791611804000", revision: 1, withdrawn_at: null },
+    ]);
+  } finally {
+    sqlite.close();
+  }
+});

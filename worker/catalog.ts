@@ -2,6 +2,10 @@ import type { Report } from "../shared/types";
 import type { ParsedReport } from "./parsers";
 export type StoredReport = Report & { withdrawn_at: number | null };
 
+// UP preliminary locations can move substantially during review. Identity still
+// requires a unique disappearing/replacement pair, close time and magnitude.
+export const UP_CORRECTION_TIME_MS = 10_000;
+
 function nearby(a: ParsedReport, b: StoredReport) {
   const dy = (a.latitude - b.latitude) * 111.2;
   const dx =
@@ -9,8 +13,8 @@ function nearby(a: ParsedReport, b: StoredReport) {
     111.2 *
     Math.cos((a.latitude * Math.PI) / 180);
   return (
-    Math.abs(a.occurred_at - b.occurred_at) <= 5000 &&
-    Math.hypot(dx, dy) <= 20 &&
+    Math.abs(a.occurred_at - b.occurred_at) <= UP_CORRECTION_TIME_MS &&
+    Math.hypot(dx, dy) <= 100 &&
     Math.abs(a.magnitude - b.magnitude) <= 0.6
   );
 }
@@ -58,7 +62,7 @@ export function reconcileUP(
         p.withdrawn_at === null &&
         !used.has(p.id) &&
         p.occurred_at >= oldest &&
-        p.occurred_at <= newest + 5000,
+        p.occurred_at <= newest + UP_CORRECTION_TIME_MS,
     ),
   };
 }
