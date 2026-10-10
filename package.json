@@ -1,0 +1,51 @@
+{
+  "name": "istmo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc --noEmit && vite build",
+    "test": "vitest run",
+    "db:migrate": "wrangler d1 migrations apply istmo-local --local",
+    "db:seed": "wrangler d1 execute istmo-local --local --file scripts/seed.sql",
+    "setup": "node --import tsx scripts/init.ts && npm run db:migrate && npm run db:seed",
+    "replay": "tsx scripts/replay.ts",
+    "collect": "tsx scripts/collect.ts",
+    "test:integration": "tsx scripts/integration.ts",
+    "prepare:fixtures": "node --import tsx scripts/prepare-fixtures.ts",
+    "format": "prettier --write src worker shared scripts tests *.json *.ts *.jsonc",
+    "dev:all": "node --import tsx scripts/dev.ts",
+    "build:production": "tsc --noEmit && CLOUDFLARE_ENV=production vite build",
+    "db:migrate:production": "wrangler d1 migrations apply istmo-production --env production --remote",
+    "deploy": "npm run build:production && wrangler deploy --config dist/istmo/wrangler.json"
+  },
+  "dependencies": {
+    "@block65/webcrypto-web-push": "^2.0.0",
+    "@fontsource-variable/dm-sans": "^5.3.0",
+    "cheerio": "^1.1.2",
+    "hono": "^4.10.0",
+    "lucide-react": "^0.468.0",
+    "maplibre-gl": "^6.13.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "seisplotjs": "^3.2.7",
+    "topojson-client": "^3.1.0",
+    "world-atlas": "^2.0.2"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.63.1",
+    "@cloudflare/workers-types": "latest",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@types/topojson-client": "^3.1.5",
+    "@vitejs/plugin-react": "^5.0.0",
+    "prettier": "^3.9.9",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0",
+    "vite": "^7.1.0",
+    "vitest": "^5.0.3",
+    "wrangler": "^4.149.0"
+  }
+}

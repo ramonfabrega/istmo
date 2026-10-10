@@ -1,0 +1,35 @@
+# Istmo
+
+The globe and measured motion are the focus. A quiet maritime observatory, grounded in the isthmus and its two oceans. No safety scores or inferred instructions.
+
+Palette: deep ocean #101e2a, coastal slate #243c4d, sea glass #8ddbd6, warm paper #edf0ee, earthquake amber #e9ad72, muted steel #91a5b3. Typography: system sans with clear numerals, generous display title, compact readable data. The dark background serves the globe rather than a generic dashboard; amber belongs to earthquake reports and sea glass to station signals.
+
+Desktop: narrow navigation rail; globe as the main surface; right report column; full-width waveform beneath the globe. Mobile: compact top navigation; map above waveform and reports; family view reachable in one tap. Left-aligned information; no decorative cards or stock imagery. Motion only from actual stream updates and direct map interaction. Reduced motion stops pulsing and camera animation.
+
+Critique before implementation: avoid a trading terminal's dense all-caps and an ornamental glowing globe. Country outlines, place labels, physical station pins, and truthful waveform axes carry the visual identity. Every replay label must remain visible. Offline is a connection state, never a flat zero trace.
+
+## Phone observatory refinement
+
+Keep ocean #101e2a, water #132735, slate #365565 and sea glass #8ddbd6. Use report magnitude colors blue #9bbbd4 (<4), sand #e9c48b (4–5), orange #e9a070 (5–6), rose #e99aab (6+), with numeric magnitudes so color is supplementary. Retain DM Sans. The map is the focal point; reduce the introductory headline and waveform chrome instead of introducing a new visual theme.
+
+Phone: compact header / flexible map / live trace strip / latest-report strip / safe-area bottom navigation. Activity is a separate bottom-nav destination using the same filters and report list. Expanded waveform and event details are bounded sheets. Desktop: larger map with a narrow dense report column and a small trace strip. No auto-moving text marquee; the trace supplies continuous motion, while report text stays readable. Selection highlights without moving the camera; explicit cluster zoom only zooms in. Cluster counts describe agency reports, not unique events.
+
+Map interaction follow-up: selecting an Activity row returns to Observe and eases to the report, preserving any closer zoom. Direct map selection keeps the camera still. Recent reports received within three minutes stay outside the cluster index, with a short arrival pulse and individually selectable labels; historical imports (over an hour old) are not presented as new motion. Nearby new labels are spaced with stems to their coordinates. Cluster counts follow rendered map tiles during zoom, with a short appearance fade. Selection remains visible above cluster badges. Map input signatures exclude changing station health and report metadata so routine refreshes do not rebuild unchanged geometry. Waveform drawing is capped at 30 fps, skips hidden canvases, rounds backing dimensions, and shares cached Panama time formatters.
+
+Verified the Activity-to-map flow and direct fresh-marker selection in iPhone simulator Safari, including real report arrivals and their expiry into clusters. Desktop rendering and console checked. New-report expiry and historical-import behavior have unit coverage.
+
+Station/location polish: the teal station core emits two staggered, feathered waves while data is arriving, becoming quiet after 45 seconds without fresh receipt. Blue marks the user's optional browser location, with a slower soft glow; it never represents a sensor. Reduced-motion preferences suppress both animations. A navigation-arrow control asks for browser permission on tap; previously granted permission can show the location without moving the camera. Coordinates remain in component memory and are not sent to the backend. Errors explain denial, timeout, or the need for HTTPS.
+
+The ordinary view excludes replay stations, signal panels, and replay source cards. Live stations appear automatically when connected. Recorded replay is now a development-only opt-in at `/?demo=1`; production builds cannot enable it. The released observatory can stand on agency reports without an invented local instrument.
+
+People and Sources use fixed workspace headers and footers, matching Observe. Onboarding and source details scroll inside their content regions; a populated circle keeps group controls above the scrollable board. Circle creation requires only your name and a circle name. Circles persist across occasions, support multiple memberships on a device, and retain repeated check-ins with reporter attribution and paginated history. There is no occasion/reset field. Sources separates Agencies, Stations, and Reading the data.
+
+Invitations are seven-day links in a URL fragment. Opening a link previews the circle and asks for a name/confirmation; existing local members can open it directly. Copy invite link is one button with brief Copied feedback, including Safari's gesture-preserving clipboard path. Creating a new link doesn't invalidate existing links; issuers and owners can revoke links in Manage.
+
+Location sharing is separately off by default on each self check-in. It stores a snapshot with capture time and accuracy; a proxy check-in cannot use the reporter's device location. The main Observe map has a circle-view toggle, also reachable from People. It reuses the map canvas and restores the prior earthquake camera on exit. Circle view displays the latest shared check-in per person for up to 24 hours, plus named gathering spots placed on the map. A newer check-in without a location hides the older position. Manage can clear the member's shared coordinates. The private blue device-location dot remains separate from shared circle pins.
+
+An empty-map click or Escape dismisses details and cluster pickers; a drag does not. Selecting a cluster replaces quake details, with an async request guard so a late cluster lookup cannot reopen a dismissed picker.
+
+Optional sound lives in the notification preferences. Enabling explicitly unlocks Web Audio and previews a quiet two-tone chime. A separate 30-second Panama report poll ignores the initial baseline, revisions, and events older than 15 minutes. Agency and magnitude filters are independent from push subscriptions and map filtering. Audio is re-armed explicitly after reload; background browser throttling and suspended audio remain possible. Push is separate and supports capable desktop browsers as well as installed iPhone web apps.
+
+Verified desktop cluster/detail replacement, empty-click versus drag, Escape, clipboard confirmation, and the audio preview; iPhone simulator Safari circle creation, invitation copying, and opt-in location snapshot submission. API integration covers invite revocation, cross-circle isolation, attribution, history, idempotency, and own-location enforcement. Production is deployed at istmo.ramonfabrega.com. Fresh-report markers use an explicit incremental-arrival timestamp; first imports and outage catch-up never highlight a catalog batch as new.

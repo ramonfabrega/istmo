@@ -1,0 +1,68 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "istmo",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-10-09",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./dist/client",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"],
+  },
+  "vars": { "APP_ENV": "local" },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "istmo-local",
+      "database_id": "local-only",
+      "migrations_dir": "migrations",
+    },
+  ],
+  "r2_buckets": [
+    { "binding": "ARCHIVE", "bucket_name": "istmo-local-archive" },
+  ],
+  "durable_objects": {
+    "bindings": [{ "name": "STATIONS", "class_name": "StationRelay" }],
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["StationRelay"] }],
+  "triggers": { "crons": ["* * * * *"] },
+  "env": {
+    "production": {
+      "name": "istmo",
+      "workers_dev": false,
+      "preview_urls": false,
+      "routes": [
+        { "pattern": "istmo.ramonfabrega.com", "custom_domain": true },
+      ],
+      "vars": { "APP_ENV": "production" },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "istmo-production",
+          "database_id": "b3a52b8d-f0f5-4742-938d-7dca734ad446",
+          "migrations_dir": "migrations",
+        },
+      ],
+      "r2_buckets": [
+        { "binding": "ARCHIVE", "bucket_name": "istmo-production-archive" },
+      ],
+      "durable_objects": {
+        "bindings": [{ "name": "STATIONS", "class_name": "StationRelay" }],
+      },
+      "ratelimits": [
+        {
+          "name": "API_READ_LIMIT",
+          "namespace_id": "179161001",
+          "simple": { "limit": 300, "period": 60 },
+        },
+        {
+          "name": "API_WRITE_LIMIT",
+          "namespace_id": "179161002",
+          "simple": { "limit": 60, "period": 60 },
+        },
+      ],
+      "observability": { "enabled": true, "head_sampling_rate": 0.1 },
+      "triggers": { "crons": ["* * * * *"] },
+    },
+  },
+}

@@ -1,0 +1,14 @@
+PRAGMA foreign_keys = ON;
+CREATE TABLE sources (id TEXT PRIMARY KEY, name TEXT NOT NULL, url TEXT NOT NULL, last_attempt INTEGER, last_success INTEGER, error TEXT, report_count INTEGER DEFAULT 0);
+INSERT INTO sources(id,name,url) VALUES ('up','Geociencias UP','https://sismosgeociencias.up.ac.pa/'),('usgs','USGS','https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson');
+CREATE TABLE reports (id TEXT PRIMARY KEY, source TEXT NOT NULL REFERENCES sources(id), source_id TEXT NOT NULL, occurred_at INTEGER NOT NULL, latitude REAL NOT NULL, longitude REAL NOT NULL, depth REAL NOT NULL, magnitude REAL NOT NULL, magnitude_type TEXT, place TEXT NOT NULL, status TEXT NOT NULL, url TEXT NOT NULL, first_seen INTEGER NOT NULL, updated_at INTEGER NOT NULL, revision INTEGER NOT NULL DEFAULT 1, fingerprint TEXT NOT NULL, UNIQUE(source,source_id));
+CREATE INDEX reports_time ON reports(occurred_at DESC);
+CREATE TABLE report_revisions (report_id TEXT NOT NULL REFERENCES reports(id), revision INTEGER NOT NULL, observed_at INTEGER NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(report_id,revision));
+CREATE TABLE stations (id TEXT PRIMARY KEY, name TEXT NOT NULL, latitude REAL NOT NULL, longitude REAL NOT NULL, mode TEXT NOT NULL CHECK(mode IN ('replay','live')), description TEXT NOT NULL, token_hash TEXT, last_received INTEGER, last_sample INTEGER);
+CREATE TABLE waveform_records (id TEXT PRIMARY KEY, station_id TEXT NOT NULL REFERENCES stations(id), session TEXT NOT NULL, sequence INTEGER NOT NULL, start_time INTEGER NOT NULL, original_start INTEGER NOT NULL, sample_rate REAL NOT NULL, sample_count INTEGER NOT NULL, channel TEXT NOT NULL, object_key TEXT NOT NULL, bytes INTEGER NOT NULL, received_at INTEGER NOT NULL, UNIQUE(station_id,session,sequence));
+CREATE INDEX waveform_station ON waveform_records(station_id,received_at DESC);
+CREATE TABLE family_groups (id TEXT PRIMARY KEY, name TEXT NOT NULL, invite_hash TEXT NOT NULL UNIQUE, incident TEXT NOT NULL, meeting_point TEXT NOT NULL DEFAULT '', created_at INTEGER NOT NULL);
+CREATE TABLE members (id TEXT PRIMARY KEY, group_id TEXT NOT NULL REFERENCES family_groups(id), name TEXT NOT NULL, token_hash TEXT NOT NULL UNIQUE, created_at INTEGER NOT NULL);
+CREATE TABLE people (id TEXT PRIMARY KEY, group_id TEXT NOT NULL REFERENCES family_groups(id), name TEXT NOT NULL);
+CREATE TABLE checkins (id TEXT PRIMARY KEY, group_id TEXT NOT NULL REFERENCES family_groups(id), person_id TEXT NOT NULL REFERENCES people(id), reporter_id TEXT NOT NULL REFERENCES members(id), incident TEXT NOT NULL, kind TEXT NOT NULL CHECK(kind IN ('status','presence')), value TEXT NOT NULL, note TEXT NOT NULL DEFAULT '', contacted_at INTEGER NOT NULL, created_at INTEGER NOT NULL);
+CREATE INDEX checkins_group ON checkins(group_id,created_at DESC);

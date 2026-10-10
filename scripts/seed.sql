@@ -1,0 +1,1 @@
+INSERT OR IGNORE INTO stations(id,name,latitude,longitude,mode,description) VALUES ('replay-panama','Panama replay station',8.9824,-79.5199,'replay','Demo location in Panama City. Recorded BW.BGLD waveform from Germany, replayed through the station pipeline. Not a measurement in Panama.');
