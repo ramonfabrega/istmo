@@ -3377,3 +3377,119 @@ body {
   right: 1px;
   bottom: 3px;
 }
+
+/* Keep the instrument controls anchored when their language changes. */
+.topbar-right > * {
+  flex-shrink: 0;
+}
+.local-clock {
+  width: 138px;
+  justify-content: flex-end;
+  white-space: nowrap;
+}
+.local-tag {
+  width: 110px;
+  text-align: center;
+}
+.map-tools .map-view-toggle {
+  width: 100px;
+}
+.notification-toggle > span {
+  min-width: 3ch;
+  text-align: right;
+}
+.source-sections button,
+.board-tabs button {
+  flex: 0 1 150px;
+  min-width: 0;
+}
+.source-tabs button:first-child {
+  min-width: 102px;
+}
+.ticker-label {
+  flex: 0 0 112px;
+}
+.family-title p,
+.sources-heading p {
+  min-height: 3em;
+}
+
+/* Brief responses to interaction; the live map remains the visual focus. */
+@media (prefers-reduced-motion: no-preference) {
+  .modal-backdrop {
+    animation: veil-in 160ms ease-out;
+  }
+  .about-modal,
+  .checkin-modal,
+  .detail-sheet,
+  .circle-pin-detail,
+  .gathering-form {
+    animation: panel-in 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .notification-options[open] > :not(summary) {
+    animation: veil-in 180ms ease-out;
+  }
+  .rail nav button,
+  .source-sections button,
+  .board-tabs button,
+  .map-tools button,
+  .notification-button {
+    transition:
+      background-color 160ms ease,
+      color 160ms ease,
+      border-color 160ms ease;
+  }
+  .map-tools button > svg,
+  .rail nav button > svg {
+    transition: transform 140ms ease;
+  }
+  .map-tools button:active > svg,
+  .rail nav button:active > svg {
+    transform: scale(0.9);
+  }
+}
+@keyframes veil-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@media (max-width: 760px) {
+  .local-clock {
+    width: 78px;
+  }
+  .map-tools .map-view-toggle {
+    width: 82px;
+  }
+  .source-sections button,
+  .board-tabs button {
+    flex: 1 1 0;
+    padding-inline: 6px;
+  }
+  .source-sections button {
+    min-height: 44px;
+  }
+  .ticker-label {
+    flex-basis: 14px;
+  }
+}
+@media (max-width: 360px) {
+  .map-tools {
+    gap: 3px;
+  }
+  .map-tools button {
+    min-width: 40px;
+  }
+}

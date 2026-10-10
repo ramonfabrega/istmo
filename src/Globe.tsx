@@ -797,7 +797,7 @@ export default function Globe({
         >
           <Navigation size={17} />
         </button>
-        <button onClick={() => view(!global)}>
+        <button className="map-view-toggle" onClick={() => view(!global)}>
           <Globe2 size={16} />
           {global ? t("Panama") : t("Globe")}
         </button>
