@@ -1,4 +1,5 @@
 import { t } from "./i18n";
+import { installGuide } from "./install-guide";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { Download, RefreshCw, X } from "lucide-react";
 
@@ -50,24 +51,20 @@ export function InstallButton() {
       installListeners.forEach((listener) => listener());
     }
   }
+  const guide = installGuide(navigator);
   return (
     <div className="install-control">
-      <button onClick={() => void install()}>
+      <button onClick={() => void install()} aria-expanded={help}>
         <Download size={15} />
         {t("Install Istmo")}
       </button>
       {help && (
         <div className="install-help" role="status">
-          <p>
-            <strong>iPhone / iPad:</strong>{" "}
-            {t("open Safari’s Share menu (it may be under •••), choose")}{" "}
-            <strong>{t("Add to Home Screen")}</strong>
-            {t(", keep")} <strong>{t("Open as Web App")}</strong>{" "}
-            {t("on if shown, then tap")} <strong>{t("Add")}</strong>.
-          </p>
+          <strong>{t(guide.title)}</strong>
+          <p>{t(guide.instructions)}</p>
           <p>
             {t(
-              "On other browsers, use the install icon in the address bar or the browser menu. Open the installed app to enable phone notifications.",
+              "After installing, open Istmo from its app icon and enable notifications from the bell.",
             )}
           </p>
         </div>
