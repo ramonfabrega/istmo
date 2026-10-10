@@ -1,3 +1,4 @@
+import { t, useLocale } from "./i18n";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { CirclePin, CircleLayer } from "./Globe";
 import type { CircleSession } from "./circles";
@@ -12,6 +13,7 @@ export default function CircleMap({
   onClose: () => void;
   children: (layer: CircleLayer | undefined) => ReactNode;
 }) {
+  const locale = useLocale();
   const [snapshot, setSnapshot] = useState<{ id: string; data: Family } | null>(
     null,
   );
@@ -48,7 +50,9 @@ export default function CircleMap({
       } catch {
         if (active)
           setError(
-            "Circle unavailable. Any visible positions are last received snapshots.",
+            t(
+              "Circle unavailable. Any visible positions are last received snapshots.",
+            ),
           );
       }
     };
@@ -113,7 +117,10 @@ export default function CircleMap({
           latitude: latest.latitude,
           longitude: latest.longitude,
           kind: "person" as const,
-          detail: `Shared ${dateTime(latest.located_at)} · accuracy ±${Math.round(latest.accuracy || 0)} m`,
+          detail: t("Shared {date} · accuracy ±{accuracy} m", {
+            date: dateTime(latest.located_at),
+            accuracy: Math.round(latest.accuracy || 0),
+          }),
         },
       ];
     });
@@ -122,10 +129,10 @@ export default function CircleMap({
       ...(data.places || []).map((p) => ({
         ...p,
         kind: "place" as const,
-        detail: "Gathering spot",
+        detail: t("Gathering spot"),
       })),
     ];
-  }, [data, now]);
+  }, [data, now, locale]);
   const layer: CircleLayer | undefined = session
     ? {
         id: session.id,
@@ -153,8 +160,8 @@ export default function CircleMap({
             <span>
               <b>{session.name}</b>
               <small>
-                {pins.filter((p) => p.kind === "person").length} shared
-                positions · last 24h
+                {pins.filter((p) => p.kind === "person").length}{" "}
+                {t("shared positions · last 24h")}
               </small>
             </span>
             <button
@@ -164,10 +171,10 @@ export default function CircleMap({
                 setSelected(null);
               }}
             >
-              {picking || draft ? "Cancel" : "Add gathering spot"}
+              {picking || draft ? t("Cancel") : t("Add gathering spot")}
             </button>
-            <button onClick={onClose} aria-label="Close circle map">
-              Earthquakes ×
+            <button onClick={onClose} aria-label={t("Close circle map")}>
+              {t("Earthquakes ×")}
             </button>
           </div>
           {error && (
@@ -176,7 +183,7 @@ export default function CircleMap({
             </p>
           )}
           {!data && !error && (
-            <p className="circle-overlay-notice">Loading circle…</p>
+            <p className="circle-overlay-notice">{t("Loading circle…")}</p>
           )}
           {selected && data && (
             <div className="circle-pin-detail">
@@ -192,10 +199,10 @@ export default function CircleMap({
                       if (await onRemove(selected.id)) setSelected(null);
                     }}
                   >
-                    Remove spot
+                    {t("Remove spot")}
                   </button>
                 )}
-              <button onClick={() => setSelected(null)}>Close</button>
+              <button onClick={() => setSelected(null)}>{t("Close")}</button>
             </div>
           )}
           {draft && (
@@ -211,31 +218,31 @@ export default function CircleMap({
               }}
             >
               <label>
-                Name this gathering spot
+                {t("Name this gathering spot")}
                 <input
                   required
                   autoFocus
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   maxLength={100}
-                  placeholder="Grandpa’s office"
+                  placeholder={t("Grandpa’s office")}
                 />
               </label>
               <small>
-                {draft.latitude.toFixed(4)}°, {draft.longitude.toFixed(4)}° ·
-                visible to this circle
+                {draft.latitude.toFixed(4)}°, {draft.longitude.toFixed(4)}
+                {t("° · visible to this circle")}
               </small>
               <button className="primary" disabled={busy}>
-                Save spot
+                {t("Save spot")}
               </button>
               <button type="button" onClick={() => setDraft(null)}>
-                Cancel
+                {t("Cancel")}
               </button>
             </form>
           )}
           {!pins.length && !picking && (
             <p className="circle-map-empty">
-              Share a location when checking in, or add a gathering spot.
+              {t("Share a location when checking in, or add a gathering spot.")}
             </p>
           )}
         </>

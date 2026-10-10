@@ -42,3 +42,13 @@ Connect the public `ramonfabrega/istmo` repository to the existing **istmo** Wor
 - Use `bun run test`, not `bun test`: the suite uses Vitest on Node, including `node:sqlite`.
 
 The Cloudflare build token needs permission to deploy this Worker and apply D1 migrations. Existing runtime secrets stay on the Worker; do not add `.dev.vars.production` to Git or upload those secrets as public build variables. No VAPID/private keys are needed to compile the app. Keep preview branches from deploying to production until a separate preview environment is configured.
+
+## Reliability and monitoring
+
+`GET /api/health` is a readiness endpoint: HTTP 200 when both sources succeeded within three minutes, the scheduled run is current, VAPID is configured and the push queue is not stalled; otherwise HTTP 503 with sanitized status. A quiet earthquake catalog is not a stale feed—the monitor uses successful collection timestamps. Sources shows the same summary.
+
+Cron attempts both sources independently and drains notifications even when a source fails. Each outgoing message takes a 60-second claim before sending, so overlapping cron/test requests do not send the same job concurrently. A worker failure after provider acceptance but before the database update can still cause a retry: delivery is at-least-once, with stable notification tags. Failed sends back off until expiry.
+
+Maintenance expires unsent records and deletes accepted/expired outbox records seven days after expiry. It does not delete subscriptions, earthquake revisions, circles or check-ins. Health transitions produce structured `health_transition` logs without payloads or device identifiers; Cloudflare log sampling still applies. The public endpoint is suitable for an external uptime monitor. External paging is not configured; a stopped scheduler cannot report its own outage through cron logs.
+
+Migration 0009 is additive and runs before deployment. Older subscriptions default to English until a client saves its language. Local `dev:all` uses the collector process rather than cron, so scheduler health may show stale locally.

@@ -2,7 +2,7 @@ import { digest } from "./crypto";
 import { reconcileUP, newReportTime, type StoredReport } from "./catalog";
 import type { Env } from "./env";
 import { parseUP, parseUSGS, type ParsedReport } from "./parsers";
-import { enqueueReport, drainPush } from "./push";
+import { enqueueReport } from "./push";
 export const sourceUrls = {
   up: "https://sismosgeociencias.up.ac.pa/",
   usgs: "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson",
@@ -108,7 +108,6 @@ export async function storeReports(
   )
     .bind(now, now, reports.length, source)
     .run();
-  await drainPush(env);
   return reports.length;
 }
 export async function collect(

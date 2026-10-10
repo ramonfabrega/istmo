@@ -1,3 +1,4 @@
+import { t, useLocale } from "./i18n";
 import { useEffect, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
 import type { GeoJSONSource } from "maplibre-gl";
@@ -54,8 +55,13 @@ export default function Globe({
   onDismiss?: () => void;
   onCircleToggle?: () => void;
 }) {
+  const locale = useLocale();
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
+  const refreshLabels = useRef(() => {});
+  useEffect(() => {
+    refreshLabels.current();
+  }, [locale]);
   const latest = useRef({ reports, stations, onSelect, onStation, onDismiss });
   latest.current = { reports, stations, onSelect, onStation, onDismiss };
   const circleRef = useRef(circle);
@@ -80,7 +86,7 @@ export default function Globe({
   const requestLocation = (center: boolean) => {
     if (!window.isSecureContext || !navigator.geolocation) {
       setLocationError(
-        "Location needs HTTPS. Open the secure studio link to use it.",
+        t("Location needs HTTPS. Open the secure studio link to use it."),
       );
       return;
     }
@@ -110,10 +116,14 @@ export default function Globe({
         if (failure.code === 1) setPosition(null);
         setLocationError(
           failure.code === 1
-            ? "Location is off. You can allow it in your browser’s site settings."
+            ? t(
+                "Location is off. You can allow it in your browser’s site settings.",
+              )
             : failure.code === 3
-              ? "Location took too long. Tap My location to try again."
-              : "Your location is unavailable. Tap My location to try again.",
+              ? t("Location took too long. Tap My location to try again.")
+              : t(
+                  "Your location is unavailable. Tap My location to try again.",
+                ),
         );
       },
       { enableHighAccuracy: true, timeout: 12_000, maximumAge: 30_000 },
@@ -353,7 +363,9 @@ export default function Globe({
             button.textContent = String(f.properties.point_count);
             button.setAttribute(
               "aria-label",
-              `${f.properties.point_count} agency reports in this area`,
+              t("{count} agency reports in this area", {
+                count: f.properties.point_count,
+              }),
             );
             button.onclick = async (e) => {
               e.stopPropagation();
@@ -384,12 +396,12 @@ export default function Globe({
             const marker = clusterMarkers.get(id)!;
             marker.setLngLat(coordinates);
             marker.getElement().textContent = String(f.properties.point_count);
-            marker
-              .getElement()
-              .setAttribute(
-                "aria-label",
-                `${f.properties.point_count} agency reports in this area`,
-              );
+            marker.getElement().setAttribute(
+              "aria-label",
+              t("{count} agency reports in this area", {
+                count: f.properties.point_count,
+              }),
+            );
           }
         }
         for (const [id, marker] of clusterMarkers)
@@ -398,6 +410,7 @@ export default function Globe({
             clusterMarkers.delete(id);
           }
       };
+      refreshLabels.current = updateClusters;
       // Query the currently rendered tiles while zooming, not only after movement ends.
       m.on("render", () => {
         const now = performance.now();
@@ -441,7 +454,9 @@ export default function Globe({
         }
       });
       m.on("error", () =>
-        setError("Map unavailable. Reports and station readings remain below."),
+        setError(
+          t("Map unavailable. Reports and station readings remain below."),
+        ),
       );
       m.on("click", "quakes", (e) => {
         if (circleRef.current?.picking) return;
@@ -472,10 +487,13 @@ export default function Globe({
       }
     } catch {
       setError(
-        "This browser cannot render the globe. The full activity list is still available.",
+        t(
+          "This browser cannot render the globe. The full activity list is still available.",
+        ),
       );
     }
     return () => {
+      refreshLabels.current = () => {};
       resizeObserver?.disconnect();
       for (const marker of clusterMarkers.values()) marker.remove();
       for (const marker of freshMarkers.current.values()) marker.remove();
@@ -525,10 +543,16 @@ export default function Globe({
       marker.setLngLat([r.longitude, r.latitude]);
       const button = marker.getElement();
       button.style.setProperty("--quake-color", magnitudeColor(r.magnitude));
-      button.textContent = `New report · M ${r.magnitude.toFixed(1)}`;
+      button.textContent = t("New report · M {magnitude}", {
+        magnitude: r.magnitude.toFixed(1),
+      });
       button.setAttribute(
         "aria-label",
-        `New ${r.source.toUpperCase()} report, magnitude ${r.magnitude.toFixed(1)}, ${r.place}`,
+        t("New {agency} report, magnitude {magnitude}, {place}", {
+          agency: r.source.toUpperCase(),
+          magnitude: r.magnitude.toFixed(1),
+          place: r.place,
+        }),
       );
     }
     for (const [id, marker] of freshMarkers.current) {
@@ -538,7 +562,7 @@ export default function Globe({
       }
     }
     layoutFreshMarkers();
-  }, [reports, freshClock, ready]);
+  }, [reports, freshClock, ready, locale]);
   useEffect(() => {
     const m = map.current;
     if (!ready || !m) return;
@@ -565,7 +589,7 @@ export default function Globe({
       marker.setLngLat([station.longitude, station.latitude]);
       const receiving =
         !!station.last_received && Date.now() - station.last_received < 45_000;
-      const label = `${station.name} · ${station.mode === "replay" ? "recorded replay" : "sensor station"} · ${receiving ? "receiving data" : "no recent data"}`;
+      const label = `${station.name} · ${station.mode === "replay" ? t("recorded replay") : t("sensor station")} · ${receiving ? t("receiving data") : t("no recent data")}`;
       marker.getElement().classList.toggle("receiving", receiving);
       marker.getElement().setAttribute("aria-label", label);
       marker.getElement().title = label;
@@ -576,13 +600,15 @@ export default function Globe({
         stationMarkers.current.delete(id);
       }
     }
-  }, [stations, ready, freshClock]);
+  }, [stations, ready, freshClock, locale]);
   useEffect(() => {
     const m = map.current;
     if (!ready || !m || !position) return;
     const element = document.createElement("div");
     element.className = "user-location-marker";
-    const label = `Your approximate location · accuracy ±${Math.round(position.accuracy)} m`;
+    const label = t("Your approximate location · accuracy ±{accuracy} m", {
+      accuracy: Math.round(position.accuracy),
+    });
     element.title = label;
     element.setAttribute("role", "img");
     element.setAttribute("aria-label", label);
@@ -592,7 +618,7 @@ export default function Globe({
     return () => {
       marker.remove();
     };
-  }, [position, ready]);
+  }, [position, ready, locale]);
   useEffect(() => {
     if (!ready || !focusRequest) return;
     const frame = requestAnimationFrame(() => {
@@ -726,24 +752,28 @@ export default function Globe({
       <div
         ref={el}
         className="map"
-        aria-label="Interactive globe showing earthquake reports and stations"
+        aria-label={t(
+          "Interactive globe showing earthquake reports and stations",
+        )}
       />
       {error && <div className="map-error">{error}</div>}
       <div className="map-heading">
-        <h1>{circle ? "Your circle, on the map." : "Ground in motion."}</h1>
+        <h1>
+          {circle ? t("Your circle, on the map.") : t("Ground in motion.")}
+        </h1>
         <p>
           {circle
             ? circle.picking
-              ? "Tap the map to place a gathering spot."
-              : "Shared check-ins · not live positions."
-            : "Panama, between two oceans."}
+              ? t("Tap the map to place a gathering spot.")
+              : t("Shared check-ins · not live positions.")
+            : t("Panama, between two oceans.")}
         </p>
       </div>
       <div className="map-tools">
         {onCircleToggle && (
           <button
-            aria-label="Toggle circle map"
-            title="Circle map"
+            aria-label={t("Toggle circle map")}
+            title={t("Circle map")}
             aria-pressed={!!circle}
             className={circle ? "location-active" : ""}
             onClick={onCircleToggle}
@@ -752,11 +782,13 @@ export default function Globe({
           </button>
         )}
         <button
-          aria-label="My location"
+          aria-label={t("My location")}
           title={
             position
-              ? `My location · accuracy ±${Math.round(position.accuracy)} m`
-              : "Show my location (only on this device)"
+              ? t("My location · accuracy ±{accuracy} m", {
+                  accuracy: Math.round(position.accuracy),
+                })
+              : t("Show my location (only on this device)")
           }
           aria-busy={locating}
           className={position ? "location-active" : ""}
@@ -767,13 +799,13 @@ export default function Globe({
         </button>
         <button onClick={() => view(!global)}>
           <Globe2 size={16} />
-          {global ? "Panama" : "Globe"}
+          {global ? t("Panama") : t("Globe")}
         </button>
-        <button aria-label="Center on Panama" onClick={() => view(false)}>
+        <button aria-label={t("Center on Panama")} onClick={() => view(false)}>
           <LocateFixed size={17} />
         </button>
         <button
-          aria-label="Zoom in"
+          aria-label={t("Zoom in")}
           onClick={() =>
             map.current?.zoomIn({
               duration: matchMedia("(prefers-reduced-motion: reduce)").matches
@@ -785,7 +817,7 @@ export default function Globe({
           <Plus size={17} />
         </button>
         <button
-          aria-label="Zoom out"
+          aria-label={t("Zoom out")}
           onClick={() =>
             map.current?.zoomOut({
               duration: matchMedia("(prefers-reduced-motion: reduce)").matches
@@ -799,10 +831,10 @@ export default function Globe({
       </div>
       {(locating || locationError) && (
         <div className="location-notice" role="status">
-          <span>{locating ? "Finding your location…" : locationError}</span>
+          <span>{locating ? t("Finding your location…") : locationError}</span>
           {!locating && (
             <button
-              aria-label="Dismiss location message"
+              aria-label={t("Dismiss location message")}
               onClick={() => setLocationError("")}
             >
               <X size={14} />
@@ -815,11 +847,11 @@ export default function Globe({
           <>
             <span>
               <i className="dot" style={{ background: "#9ebfee" }} />
-              Check-in
+              {t("Check-in")}
             </span>
             <span>
               <i className="dot teal" />
-              Gathering spot
+              {t("Gathering spot")}
             </span>
           </>
         ) : (
@@ -844,25 +876,29 @@ export default function Globe({
         {stations.length > 0 && (
           <span>
             <i className="dot teal" />
-            Station
+            {t("Station")}
           </span>
         )}
         {position && (
           <span>
             <i className="dot" style={{ background: "#9ebfee" }} />
-            {circle ? "You (this device)" : "You"}
+            {circle ? t("You (this device)") : t("You")}
           </span>
         )}
       </div>
       {overlap.length > 0 && (
-        <section className="map-picker" aria-label="Reports in this area">
+        <section className="map-picker" aria-label={t("Reports in this area")}>
           <header>
             <div>
-              <b>{overlap.length} agency reports</b>
-              <small>Individual reports, including different agencies</small>
+              <b>
+                {overlap.length} {t("agency reports")}
+              </b>
+              <small>
+                {t("Individual reports, including different agencies")}
+              </small>
             </div>
             <button
-              aria-label="Close nearby reports"
+              aria-label={t("Close nearby reports")}
               onClick={() => setOverlap([])}
             >
               <X size={18} />
@@ -882,7 +918,7 @@ export default function Globe({
               setOverlap([]);
             }}
           >
-            Zoom into this area <Plus size={14} />
+            {t("Zoom into this area")} <Plus size={14} />
           </button>
           <div>
             {overlap.map((r) => (

@@ -2,7 +2,8 @@ import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import type { Env } from "./env";
 import family from "./family";
-import push from "./push";
+import push, { drainPush } from "./push";
+import { health, maintain } from "./health";
 import { collect } from "./collect";
 import { digest } from "./crypto";
 export { StationRelay } from "./relay";
@@ -47,9 +48,10 @@ app.onError((err, c) => {
   console.error(err);
   return c.json({ error: "Request failed. Check server logs." }, 500);
 });
-app.get("/api/health", (c) =>
-  c.json({ ok: true, environment: c.env.APP_ENV, time: Date.now() }),
-);
+app.get("/api/health", async (c) => {
+  const state = await health(c.env);
+  return c.json(state, state.ok ? 200 : 503);
+});
 app.get("/api/reports", async (c) => {
   const hours = Math.min(168, Math.max(1, Number(c.req.query("hours")) || 24));
   const mag = Math.max(-2, Math.min(10, Number(c.req.query("magnitude")) || 0));
@@ -199,6 +201,7 @@ app.post("/api/admin/collect", async (c) => {
   if (body.raw && c.env.APP_ENV !== "local")
     return c.json({ error: "Raw imports are local-only" }, 403);
   const result = await collect(c.env, body.source as "up" | "usgs", body.raw);
+  await drainPush(c.env);
   return c.json(result, "error" in result ? 502 : 200);
 });
 app.route("/api/family", family);
@@ -213,8 +216,12 @@ export default {
   ) {
     ctx.waitUntil(
       (async () => {
-        for (const source of ["up", "usgs"] as const)
-          await collect(env, source);
+        try {
+          await Promise.allSettled([collect(env, "up"), collect(env, "usgs")]);
+          await drainPush(env);
+        } finally {
+          await maintain(env);
+        }
       })(),
     );
   },

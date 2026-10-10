@@ -1,3 +1,4 @@
+import { t } from "./i18n";
 import { useEffect, useRef, useState } from "react";
 import type { Report } from "../shared/types";
 import { api, safeRead, safeWrite } from "./api";
@@ -45,6 +46,8 @@ export function useReportSound() {
     safeRead("istmo-sound", false),
   );
   const [enabled, setEnabled] = useState(false);
+  const wanted = useRef(preferred);
+  wanted.current = preferred;
   const [source, setSource] = useState(() =>
     safeRead("istmo-sound-source", "up"),
   );
@@ -109,7 +112,7 @@ export function useReportSound() {
     await context.current.resume();
     if (!chime(reportedMagnitude, soundMode))
       throw new Error(
-        "Your browser has paused audio. Try again with this tab in front.",
+        t("Your browser has paused audio. Try again with this tab in front."),
       );
   };
   const preview = async (
@@ -120,30 +123,70 @@ export function useReportSound() {
       await playFromGesture(reportedMagnitude, soundMode);
       setMessage(
         soundMode === "simple"
-          ? "Simple chime preview."
-          : `M ${reportedMagnitude.toFixed(1)} preview · ${magnitudeBand(reportedMagnitude).note}.`,
+          ? t("Simple chime preview.")
+          : t("M {magnitude} preview · {note}.", {
+              magnitude: reportedMagnitude.toFixed(1),
+              note: magnitudeBand(reportedMagnitude).note,
+            }),
       );
     } catch (error) {
       setMessage(String(error));
     }
   };
   const enable = async () => {
+    wanted.current = true;
+    setPreferred(true);
+    safeWrite("istmo-sound", true);
     try {
       await playFromGesture(4, prefs.current.mode);
-      setPreferred(true);
-      safeWrite("istmo-sound", true);
+      if (!wanted.current) return;
       setEnabled(true);
-      setMessage("Sound is on for this session.");
+      setMessage(t("Sound is on for this session."));
     } catch (error) {
       setMessage(String(error));
     }
   };
   const disable = () => {
+    wanted.current = false;
     setEnabled(false);
     setPreferred(false);
     safeWrite("istmo-sound", false);
-    setMessage("Sound is off.");
+    setMessage(t("Sound is off."));
   };
+  useEffect(() => {
+    if (!preferred) return;
+    let active = true;
+    const restore = () => {
+      if (!active || !wanted.current || document.hidden) return;
+      try {
+        context.current ||= new AudioContext();
+        const audio = context.current;
+        const update = () => {
+          if (active && wanted.current) setEnabled(audio.state === "running");
+        };
+        audio.onstatechange = update;
+        update();
+        if (audio.state !== "running")
+          void audio
+            .resume()
+            .then(update)
+            .catch(() => {});
+      } catch {
+        /* Audio may require a user gesture or be unavailable. */
+      }
+    };
+    restore();
+    window.addEventListener("pointerup", restore);
+    window.addEventListener("keydown", restore);
+    document.addEventListener("visibilitychange", restore);
+    return () => {
+      active = false;
+      window.removeEventListener("pointerup", restore);
+      window.removeEventListener("keydown", restore);
+      document.removeEventListener("visibilitychange", restore);
+      if (context.current) context.current.onstatechange = null;
+    };
+  }, [preferred]);
   useEffect(() => {
     safeWrite("istmo-sound-source", source);
     safeWrite("istmo-sound-mag", magnitude);
@@ -178,11 +221,16 @@ export function useReportSound() {
           const strongest = Math.max(...fresh.map((r) => r.magnitude));
           if (chime(strongest))
             setMessage(
-              `Played a sound for ${fresh.length} new report${fresh.length === 1 ? "" : "s"} · strongest M ${strongest.toFixed(1)}.`,
+              t(
+                "Played a sound for {count} new reports · strongest M {magnitude}.",
+                { count: fresh.length, magnitude: strongest.toFixed(1) },
+              ),
             );
           else
             setMessage(
-              "Audio was paused by your browser. Tap Test sound to resume it.",
+              t(
+                "Audio was paused by your browser. Tap Test sound to resume it.",
+              ),
             );
         }
         result.reports.forEach((r) => seen.add(r.id));

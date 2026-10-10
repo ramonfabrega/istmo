@@ -1,3 +1,4 @@
+import { t } from "./i18n";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { Download, RefreshCw, X } from "lucide-react";
 
@@ -53,19 +54,21 @@ export function InstallButton() {
     <div className="install-control">
       <button onClick={() => void install()}>
         <Download size={15} />
-        Install Istmo
+        {t("Install Istmo")}
       </button>
       {help && (
         <div className="install-help" role="status">
           <p>
-            <strong>iPhone / iPad:</strong> open Safari’s Share menu (it may be
-            under •••), choose <strong>Add to Home Screen</strong>, keep{" "}
-            <strong>Open as Web App</strong> on if shown, then tap{" "}
-            <strong>Add</strong>.
+            <strong>iPhone / iPad:</strong>{" "}
+            {t("open Safari’s Share menu (it may be under •••), choose")}{" "}
+            <strong>{t("Add to Home Screen")}</strong>
+            {t(", keep")} <strong>{t("Open as Web App")}</strong>{" "}
+            {t("on if shown, then tap")} <strong>{t("Add")}</strong>.
           </p>
           <p>
-            On other browsers, use the install icon in the address bar or the
-            browser menu. Open the installed app to enable phone notifications.
+            {t(
+              "On other browsers, use the install icon in the address bar or the browser menu. Open the installed app to enable phone notifications.",
+            )}
           </p>
         </div>
       )}
@@ -130,12 +133,12 @@ export function UpdateNotice() {
   if (!available || dismissed) return null;
   return (
     <aside className="update-notice" role="status">
-      <span>A new Istmo is ready.</span>
+      <span>{t("A new Istmo is ready.")}</span>
       <button onClick={() => location.reload()}>
         <RefreshCw size={14} />
-        Reload
+        {t("Reload")}
       </button>
-      <button aria-label="Later" onClick={() => setDismissed(true)}>
+      <button aria-label={t("Later")} onClick={() => setDismissed(true)}>
         <X size={15} />
       </button>
     </aside>

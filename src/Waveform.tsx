@@ -1,3 +1,4 @@
+import { t } from "./i18n";
 import { useEffect, useRef, useState } from "react";
 import { miniseed } from "seisplotjs";
 import {
@@ -82,10 +83,10 @@ export default function Waveform({
           pending = null;
           const records = miniseed.parseDataRecords(e.data);
           if (records.length !== 1)
-            throw new Error("Unexpected waveform records");
+            throw new Error(t("Unexpected waveform records"));
           const samples = records[0].decompress();
           if (samples.length !== m.sampleCount)
-            throw new Error("Sample count mismatch");
+            throw new Error(t("Sample count mismatch"));
           if (
             !segments.current.some(
               (s) =>
@@ -105,7 +106,9 @@ export default function Waveform({
           setError("");
         } catch {
           setError(
-            "A waveform record could not be decoded. Waiting for the next record.",
+            t(
+              "A waveform record could not be decoded. Waiting for the next record.",
+            ),
           );
         }
       };
@@ -182,7 +185,11 @@ export default function Waveform({
       const scale = 10 ** Math.ceil(Math.log10(max));
       ctx.fillStyle = "#91a5b3";
       ctx.font = "10px system-ui";
-      ctx.fillText(`+${scale.toLocaleString()} counts`, 8, 12);
+      ctx.fillText(
+        t("+{count} counts", { count: scale.toLocaleString() }),
+        8,
+        12,
+      );
       ctx.fillText(`−${scale.toLocaleString()}`, 8, h - 24);
       ctx.strokeStyle = "#8ddbd6";
       ctx.lineWidth = 1.15;
@@ -247,7 +254,7 @@ export default function Waveform({
       <button
         className="wave-expand"
         aria-label={
-          expanded ? "Collapse station signal" : "Expand station signal"
+          expanded ? t("Collapse station signal") : t("Expand station signal")
         }
         aria-expanded={expanded}
         onClick={() => setExpanded(!expanded)}
@@ -257,29 +264,31 @@ export default function Waveform({
       <div className="wave-header">
         <div>
           <div className="section-kicker">
-            <Radio size={14} /> Station signal{" "}
+            <Radio size={14} /> {t("Station signal")}{" "}
             <span className="badge">
-              {station?.mode === "live" ? "Instrument feed" : "Recorded replay"}
+              {station?.mode === "live"
+                ? t("Instrument feed")
+                : t("Recorded replay")}
             </span>
           </div>
-          <h2>{station?.name || "No stations configured"}</h2>
+          <h2>{station?.name || t("No stations configured")}</h2>
         </div>
         <div className="signal-state">
           <i className={`dot ${live ? "teal" : "muted"}`} />
           {live
             ? station?.mode === "live"
-              ? "Streaming instrument"
-              : "Streaming replay"
+              ? t("Streaming instrument")
+              : t("Streaming replay")
             : connected
-              ? "Awaiting station"
-              : "Reconnecting"}
+              ? t("Awaiting station")
+              : t("Reconnecting")}
         </div>
       </div>
       <div className="wave-meta">
         <span>
           {channels.length > 1 ? (
             <select
-              aria-label="Waveform channel"
+              aria-label={t("Waveform channel")}
               value={channel}
               onChange={(e) => setChannel(e.target.value)}
             >
@@ -288,77 +297,92 @@ export default function Waveform({
               ))}
             </select>
           ) : (
-            channel || "Awaiting channel"
+            channel || t("Awaiting channel")
           )}
         </span>
-        <span>{meta ? `${meta.sampleRate} samples/s` : "— samples/s"}</span>
         <span>
-          {meta ? `Received ${ago(meta.receivedAt)}` : "No samples received"}
+          {meta
+            ? t("{rate} samples/s", { rate: meta.sampleRate })
+            : t("— samples/s")}
+        </span>
+        <span>
+          {meta
+            ? t("Received {time}", { time: ago(meta.receivedAt) })
+            : t("No samples received")}
         </span>
       </div>
       <div className="trace-wrap">
         <canvas
           ref={canvas}
-          aria-label="Seismogram of recorded ground motion in instrument counts"
+          aria-label={t(
+            "Seismogram of recorded ground motion in instrument counts",
+          )}
         />
         {!meta && (
           <div className="trace-empty">
             <Activity size={24} />
-            <p>Waiting for station data</p>
+            <p>{t("Waiting for station data")}</p>
             <small>
               {station?.mode === "replay"
-                ? "Start the local replay process to see recorded ground motion."
-                : "The trace will appear when the instrument sends a record."}
+                ? t(
+                    "Start the local replay process to see recorded ground motion.",
+                  )
+                : t(
+                    "The trace will appear when the instrument sends a record.",
+                  )}
             </small>
           </div>
         )}
       </div>
       <span className="compact-caption">
         {station?.mode === "replay"
-          ? "Historical replay · not local motion"
-          : "Instrument counts · uncalibrated"}
+          ? t("Historical replay · not local motion")
+          : t("Instrument counts · uncalibrated")}
       </span>
       <div className="wave-footer">
         <span>
           {station?.mode === "replay" ? (
             <>
-              Original:{" "}
+              {t("Original:")}{" "}
               {meta
                 ? new Date(meta.originalStart).toISOString().slice(0, 10)
                 : "—"}{" "}
-              · {station?.description || "Recorded waveform"}
+              · {station?.description || t("Recorded waveform")}
               <br />
               <small>
-                Replay at a demo location. Not local measurements. Auto-scaled
-                counts.
+                {t(
+                  "Replay at a demo location. Not local measurements. Auto-scaled counts.",
+                )}
               </small>
             </>
           ) : (
             <>
               {station?.description}
               <br />
-              <small>Instrument counts · auto-scaled · uncalibrated</small>
+              <small>
+                {t("Instrument counts · auto-scaled · uncalibrated")}
+              </small>
             </>
           )}
         </span>
         <div className="wave-actions">
           <select
-            aria-label="Waveform time window"
+            aria-label={t("Waveform time window")}
             value={windowSeconds}
             onChange={(e) => setWindowSeconds(Number(e.target.value))}
           >
-            <option value={30}>30 sec</option>
-            <option value={60}>60 sec</option>
-            <option value={180}>3 min</option>
+            <option value={30}>{t("30 sec")}</option>
+            <option value={60}>{t("60 sec")}</option>
+            <option value={180}>{t("3 min")}</option>
           </select>
           <button
-            aria-label={paused ? "Resume waveform" : "Pause waveform"}
+            aria-label={paused ? t("Resume waveform") : t("Pause waveform")}
             onClick={toggle}
           >
             {paused ? <Play size={16} /> : <Pause size={16} />}
           </button>
           <button
-            aria-label="View archived records"
+            aria-label={t("View archived records")}
             onClick={async () => {
               setShowArchive(!showArchive);
               if (station)
@@ -376,17 +400,19 @@ export default function Waveform({
       {error && <p className="inline-error">{error}</p>}
       {showArchive && (
         <div className="archive">
-          <h3>Original encoded records</h3>
-          <p>miniSEED downloads from the local archive.</p>
+          <h3>{t("Original encoded records")}</h3>
+          <p>{t("miniSEED downloads from the local archive.")}</p>
           {archive.length ? (
             archive.slice(0, 8).map((r) => (
               <a key={r.id} href={`/api/records/${encodeURIComponent(r.id)}`}>
                 {localTime(r.start_time)}{" "}
-                <span>{r.bytes.toLocaleString()} bytes · Download</span>
+                <span>
+                  {r.bytes.toLocaleString()} {t("bytes · Download")}
+                </span>
               </a>
             ))
           ) : (
-            <p>No records archived yet.</p>
+            <p>{t("No records archived yet.")}</p>
           )}
         </div>
       )}

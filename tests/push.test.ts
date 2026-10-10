@@ -129,3 +129,76 @@ it("removes expired subscriptions and tells the test caller to reconnect", async
     sqlite.close();
   }
 });
+it("claims a queued notification only once across concurrent drains", async () => {
+  const { sqlite, env } = await setup();
+  let release!: () => void;
+  let sending!: () => void;
+  const began = new Promise<void>((resolve) => {
+    sending = resolve;
+  });
+  const wait = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => {
+      sending();
+      await wait;
+      return new Response(null, { status: 201 });
+    }),
+  );
+  try {
+    sqlite
+      .prepare(
+        "INSERT INTO push_outbox(id,subscription_id,payload,next_attempt,expires_at) VALUES('race','device','{}',?,?)",
+      )
+      .run(Date.now(), Date.now() + 60000);
+    const first = drainPush(env);
+    await began;
+    await drainPush(env);
+    expect(fetch).toHaveBeenCalledOnce();
+    release();
+    await first;
+    expect(
+      sqlite.prepare("SELECT status,claim_token FROM push_outbox").get(),
+    ).toMatchObject({ status: "accepted", claim_token: null });
+  } finally {
+    release();
+    sqlite.close();
+  }
+});
+it("stores a device language securely and uses it for test notifications", async () => {
+  const { sqlite, env } = await setup();
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => new Response(null, { status: 201 })),
+  );
+  const request = (route: string, token: string) =>
+    push.request(
+      route,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: "device", token, locale: "es" }),
+      },
+      env,
+    );
+  try {
+    await request("/locale", "wrong");
+    expect(
+      sqlite.prepare("SELECT locale FROM push_subscriptions").get()?.locale,
+    ).toBe("en");
+    await request("/locale", "test-token");
+    expect(
+      sqlite.prepare("SELECT locale FROM push_subscriptions").get()?.locale,
+    ).toBe("es");
+    expect((await request("/test", "test-token")).status).toBe(200);
+    const payload = JSON.parse(
+      String(sqlite.prepare("SELECT payload FROM push_outbox").get()?.payload),
+    );
+    expect(payload.title).toBe("Istmo está conectado");
+    expect(payload.body).toContain("prueba");
+  } finally {
+    sqlite.close();
+  }
+});

@@ -1,3 +1,4 @@
+import { t } from "./i18n";
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
@@ -44,13 +45,13 @@ const incomingCode = () =>
   new URLSearchParams(location.hash.slice(1)).get("invite") || "";
 const describe = (c?: Checkin) =>
   !c
-    ? "No check-in yet"
+    ? t("No check-in yet")
     : {
-        okay: "Reported okay",
-        help: "Asked for help",
-        unknown: "Not confirmed",
-        arrived: "Arrived",
-        left: "Left",
+        okay: t("Reported okay"),
+        help: t("Asked for help"),
+        unknown: t("Not confirmed"),
+        arrived: t("Arrived"),
+        left: t("Left"),
       }[c.value] || c.value;
 
 export default function Family({
@@ -97,7 +98,7 @@ export default function Family({
     setPreview(null);
     setError("");
     if (!code) {
-      setError("Paste an invitation link or code from your circle.");
+      setError(t("Paste an invitation link or code from your circle."));
       return;
     }
     setBusy(true);
@@ -188,11 +189,12 @@ export default function Family({
     <div className="family-page">
       <div className="family-title">
         <div>
-          <span className="eyeline">Private circles</span>
-          <h1>Your people.</h1>
+          <span className="eyeline">{t("Private circles")}</span>
+          <h1>{t("Your people.")}</h1>
           <p>
-            A lasting group. Check in anytime, for yourself or someone you’ve
-            reached.
+            {t(
+              "A lasting group. Check in anytime, for yourself or someone you’ve reached.",
+            )}
           </p>
         </div>
         <Users size={32} />
@@ -200,7 +202,7 @@ export default function Family({
       {sessions.length > 0 && (
         <div className="circle-switcher">
           <select
-            aria-label="Current circle"
+            aria-label={t("Current circle")}
             value={session?.id || ""}
             onChange={(e) => select(e.target.value)}
           >
@@ -219,7 +221,7 @@ export default function Family({
             }}
           >
             <Plus size={15} />
-            Add circle
+            {t("Add circle")}
           </button>
         </div>
       )}
@@ -232,24 +234,26 @@ export default function Family({
         {setup || !session ? (
           <section className="onboard">
             <div className="tabs">
-              {(["create", "join"] as const).map((t) => (
+              {(["create", "join"] as const).map((choice) => (
                 <button
-                  key={t}
+                  key={choice}
                   disabled={busy}
-                  className={tab === t ? "active" : ""}
+                  className={tab === choice ? "active" : ""}
                   onClick={() => {
                     previewRequest.current++;
-                    setTab(t);
+                    setTab(choice);
                     setPreview(null);
                     setError("");
                   }}
                 >
-                  {t === "create" ? "Create a circle" : "Join a circle"}
+                  {choice === "create"
+                    ? t("Create a circle")
+                    : t("Join a circle")}
                 </button>
               ))}
               {session && (
                 <button
-                  aria-label="Cancel adding a circle"
+                  aria-label={t("Cancel adding a circle")}
                   onClick={() => {
                     previewRequest.current++;
                     setBusy(false);
@@ -263,17 +267,23 @@ export default function Family({
             </div>
             <h2>
               {preview
-                ? `Join ${preview.name}?`
+                ? t("Join {name}?", { name: preview.name })
                 : tab === "create"
-                  ? "Keep your people close."
-                  : "Have an invitation?"}
+                  ? t("Keep your people close.")
+                  : t("Have an invitation?")}
             </h2>
             <p>
               {preview
-                ? "Members can see each other’s check-ins. Join when you’re ready."
+                ? t(
+                    "Members can see each other’s check-ins. Join when you’re ready.",
+                  )
                 : tab === "create"
-                  ? "One circle for everyday updates, gathering plans, and checking on each other."
-                  : "Open a shared link, or paste one below. You’ll confirm before joining."}
+                  ? t(
+                      "One circle for everyday updates, gathering plans, and checking on each other.",
+                    )
+                  : t(
+                      "Open a shared link, or paste one below. You’ll confirm before joining.",
+                    )}
             </p>
             <form
               onSubmit={(e) => {
@@ -285,12 +295,12 @@ export default function Family({
             >
               {tab === "join" && !preview ? (
                 <label className="full-field">
-                  Invitation link or code
+                  {t("Invitation link or code")}
                   <input
                     required
                     value={invitation}
                     onChange={(e) => setInvitation(e.target.value)}
-                    placeholder="Paste your invitation"
+                    placeholder={t("Paste your invitation")}
                     autoCapitalize="none"
                     autoCorrect="off"
                     spellCheck={false}
@@ -300,12 +310,12 @@ export default function Family({
               ) : (
                 !alreadyJoined && (
                   <label>
-                    Your name
+                    {t("Your name")}
                     <input
                       required
                       value={reporter}
                       onChange={(e) => setReporter(e.target.value)}
-                      placeholder="How your people know you"
+                      placeholder={t("How your people know you")}
                       maxLength={100}
                     />
                   </label>
@@ -313,30 +323,32 @@ export default function Family({
               )}
               {tab === "create" && (
                 <label>
-                  Circle name
+                  {t("Circle name")}
                   <input
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="Family, friends, neighbors…"
+                    placeholder={t("Family, friends, neighbors…")}
                     maxLength={100}
                   />
                 </label>
               )}
               <button className="primary" disabled={busy}>
                 {busy
-                  ? "Connecting…"
+                  ? t("Connecting…")
                   : tab === "create"
-                    ? "Create circle"
+                    ? t("Create circle")
                     : alreadyJoined
-                      ? "Open this circle"
+                      ? t("Open this circle")
                       : preview
-                        ? "Join circle"
-                        : "Continue"}
+                        ? t("Join circle")
+                        : t("Continue")}
               </button>
             </form>
             <small>
-              Invitation links grant access to the circle. Share them privately.
+              {t(
+                "Invitation links grant access to the circle. Share them privately.",
+              )}
             </small>
           </section>
         ) : (
@@ -364,7 +376,9 @@ export default function Family({
         )}
       </div>
       <footer className="panel-footer">
-        Last check-in, not live status. Each update keeps its time and reporter.
+        {t(
+          "Last check-in, not live status. Each update keeps its time and reporter.",
+        )}
       </footer>
     </div>
   );
@@ -513,17 +527,21 @@ function CircleBoard({
       };
       if (includeLocation) {
         if (selected !== data?.member.person_id)
-          throw new Error("Only your own location can be shared.");
+          throw new Error(t("Only your own location can be shared."));
         const position = await new Promise<GeolocationPosition>(
           (resolve, reject) => {
             if (!window.isSecureContext || !navigator.geolocation)
-              return reject(new Error("Location needs the secure HTTPS link."));
+              return reject(
+                new Error(t("Location needs the secure HTTPS link.")),
+              );
             navigator.geolocation.getCurrentPosition(
               resolve,
               () =>
                 reject(
                   new Error(
-                    "Location unavailable. Try again or turn off location sharing.",
+                    t(
+                      "Location unavailable. Try again or turn off location sharing.",
+                    ),
                   ),
                 ),
               { enableHighAccuracy: true, maximumAge: 30000, timeout: 12000 },
@@ -581,10 +599,12 @@ function CircleBoard({
           </p>
         )}
         <p>
-          {offline ? "This circle is unavailable." : "Loading your circle…"}
+          {offline
+            ? t("This circle is unavailable.")
+            : t("Loading your circle…")}
         </p>
-        <button onClick={() => void refresh()}>Retry</button>
-        <button onClick={onForget}>Remove from this device</button>
+        <button onClick={() => void refresh()}>{t("Retry")}</button>
+        <button onClick={onForget}>{t("Remove from this device")}</button>
       </div>
     );
   return (
@@ -593,7 +613,7 @@ function CircleBoard({
         <div>
           <h2>{data.group.name}</h2>
           <span>
-            {data.people.length} people · You’re {data.member.name}
+            {data.people.length} {t("people · You’re")} {data.member.name}
           </span>
         </div>
         <button
@@ -601,7 +621,7 @@ function CircleBoard({
           onClick={() => openCheckin(data.member.person_id)}
           disabled={!data.member.person_id}
         >
-          Check in
+          {t("Check in")}
         </button>
         <button
           className="copy-invite"
@@ -632,7 +652,7 @@ function CircleBoard({
           }
         >
           {copied ? <Check size={15} /> : <Copy size={15} />}
-          {copied ? "Copied!" : "Copy invite link"}
+          {copied ? t("Copied!") : t("Copy invite link")}
         </button>
         <button
           onClick={() => {
@@ -643,7 +663,7 @@ function CircleBoard({
             setEdit(!edit);
           }}
         >
-          Manage
+          {t("Manage")}
         </button>
       </div>
       <div className="circle-content">
@@ -655,7 +675,7 @@ function CircleBoard({
         {offline && (
           <p className="offline-notice">
             <WifiOff size={16} />
-            Offline or unavailable. Last saved updates shown.
+            {t("Offline or unavailable. Last saved updates shown.")}
           </p>
         )}
         {edit && (
@@ -674,7 +694,7 @@ function CircleBoard({
                 }}
               >
                 <label>
-                  Circle name
+                  {t("Circle name")}
                   <input
                     required
                     value={settings.name}
@@ -685,21 +705,23 @@ function CircleBoard({
                   />
                 </label>
                 <label>
-                  Suggested meeting point (optional)
+                  {t("Suggested meeting point (optional)")}
                   <input
                     value={settings.meetingPoint}
                     maxLength={200}
-                    placeholder="Grandpa’s office"
+                    placeholder={t("Grandpa’s office")}
                     onChange={(e) =>
                       setSettings({ ...settings, meetingPoint: e.target.value })
                     }
                   />
                 </label>
                 <small>
-                  Just a suggestion. Each check-in can use a different place.
+                  {t(
+                    "Just a suggestion. Each check-in can use a different place.",
+                  )}
                 </small>
                 <button className="primary" disabled={busy}>
-                  Save settings
+                  {t("Save settings")}
                 </button>
               </form>
             )}
@@ -710,7 +732,7 @@ function CircleBoard({
                 )
               }
             >
-              Manage invitation links
+              {t("Manage invitation links")}
             </button>
             {data.member.role === "owner" && (
               <button
@@ -719,7 +741,7 @@ function CircleBoard({
                   void action(async () => setMembers(await request("/members")))
                 }
               >
-                Manage member access
+                {t("Manage member access")}
               </button>
             )}
             {members && (
@@ -727,14 +749,14 @@ function CircleBoard({
                 {members.map((m) => (
                   <div key={m.id}>
                     <span>
-                      {m.name} · {m.revoked_at ? "access removed" : m.role}
+                      {m.name} · {m.revoked_at ? t("access removed") : m.role}
                     </span>
                     {m.role !== "owner" && !m.revoked_at && (
                       <button
                         disabled={busy}
                         onClick={() => setRemoveMember(m.id)}
                       >
-                        Remove access
+                        {t("Remove access")}
                       </button>
                     )}
                   </div>
@@ -742,10 +764,11 @@ function CircleBoard({
                 {removeMember && (
                   <div className="invite-box">
                     <p>
-                      Remove {members.find((m) => m.id === removeMember)?.name}
-                      ’s access? This also revokes all existing invitation
-                      links. Shared check-in history stays. Copy a new link for
-                      future invitations.
+                      {t("Remove")}{" "}
+                      {members.find((m) => m.id === removeMember)?.name}
+                      {t(
+                        "’s access? This also revokes all existing invitation links. Shared check-in history stays. Copy a new link for future invitations.",
+                      )}
                     </p>
                     <button
                       disabled={busy}
@@ -762,10 +785,10 @@ function CircleBoard({
                         })
                       }
                     >
-                      Confirm removal
+                      {t("Confirm removal")}
                     </button>
                     <button onClick={() => setRemoveMember(null)}>
-                      Cancel
+                      {t("Cancel")}
                     </button>
                   </div>
                 )}
@@ -781,22 +804,24 @@ function CircleBoard({
                 })
               }
             >
-              Remove my shared locations
+              {t("Remove my shared locations")}
             </button>
             <button onClick={() => setForget(!forget)}>
-              Remove circle from this device
+              {t("Remove circle from this device")}
             </button>
             {invites && (
               <div className="invite-history">
                 {invites.map((i) => (
                   <div key={i.id}>
                     <span>
-                      Created {dateTime(i.created_at)} ·{" "}
+                      {t("Created")} {dateTime(i.created_at)} ·{" "}
                       {i.revoked_at
-                        ? "revoked"
+                        ? t("revoked")
                         : i.expires_at < Date.now()
-                          ? "expired"
-                          : `expires ${dateTime(i.expires_at)}`}
+                          ? t("expired")
+                          : t("expires {date}", {
+                              date: dateTime(i.expires_at),
+                            })}
                     </span>
                     {!i.revoked_at && i.expires_at > Date.now() && (
                       <button
@@ -812,7 +837,7 @@ function CircleBoard({
                           })
                         }
                       >
-                        Revoke
+                        {t("Revoke")}
                       </button>
                     )}
                   </div>
@@ -822,19 +847,25 @@ function CircleBoard({
             {forget && (
               <div className="invite-box">
                 <p>
-                  This removes saved access and pending check-ins from this
-                  device. Shared history stays in the circle. You’ll need an
-                  invitation to rejoin.
+                  {t(
+                    "This removes saved access and pending check-ins from this device. Shared history stays in the circle. You’ll need an invitation to rejoin.",
+                  )}
                 </p>
-                <button onClick={onForget}>Remove from this device</button>
-                <button onClick={() => setForget(false)}>Keep circle</button>
+                <button onClick={onForget}>
+                  {t("Remove from this device")}
+                </button>
+                <button onClick={() => setForget(false)}>
+                  {t("Keep circle")}
+                </button>
               </div>
             )}
           </div>
         )}
         {queue.length > 0 && (
           <div className="pending">
-            <b>{queue.length} updates pending—not shared yet</b>
+            <b>
+              {queue.length} {t("updates pending—not shared yet")}
+            </b>
             <button
               disabled={busy || offline}
               onClick={() =>
@@ -846,9 +877,9 @@ function CircleBoard({
                 })
               }
             >
-              Send pending
+              {t("Send pending")}
             </button>
-            <button onClick={() => saveQueue([])}>Discard</button>
+            <button onClick={() => saveQueue([])}>{t("Discard")}</button>
           </div>
         )}
         <div className="board-tabs">
@@ -858,7 +889,7 @@ function CircleBoard({
               setHistory(null);
             }}
           >
-            Latest updates
+            {t("Latest updates")}
           </button>
           <button
             className={history !== null ? "active" : ""}
@@ -867,9 +898,9 @@ function CircleBoard({
               void loadHistory();
             }}
           >
-            History
+            {t("History")}
           </button>
-          <button onClick={onShowMap}>Circle map</button>
+          <button onClick={onShowMap}>{t("Circle map")}</button>
         </div>
         {history === null ? (
           <>
@@ -886,7 +917,7 @@ function CircleBoard({
                       <h3>
                         {p.name}
                         {p.id === data.member.person_id && (
-                          <small> · you</small>
+                          <small> {t("· you")}</small>
                         )}
                       </h3>
                       <span
@@ -913,7 +944,7 @@ function CircleBoard({
                       </span>
                       {status && (
                         <small>
-                          Confirmed by {status.reporter_name}
+                          {t("Confirmed by")} {status.reporter_name}
                           {status.note && ` · ${status.note}`}
                         </small>
                       )}
@@ -926,7 +957,9 @@ function CircleBoard({
                         </small>
                       )}
                     </div>
-                    <button onClick={() => openCheckin(p.id)}>Check in</button>
+                    <button onClick={() => openCheckin(p.id)}>
+                      {t("Check in")}
+                    </button>
                   </article>
                 );
               })}
@@ -944,25 +977,26 @@ function CircleBoard({
             >
               <input
                 required
-                aria-label="Add someone without the app"
-                placeholder="Add someone without the app"
+                aria-label={t("Add someone without the app")}
+                placeholder={t("Add someone without the app")}
                 value={newPerson}
                 maxLength={100}
                 onChange={(e) => setNewPerson(e.target.value)}
               />
               <button disabled={busy}>
                 <Plus size={16} />
-                Add
+                {t("Add")}
               </button>
             </form>
             <p className="privacy-note">
-              Anyone in this circle can confirm someone they’ve reached. Names
-              are supplied by members.
+              {t(
+                "Anyone in this circle can confirm someone they’ve reached. Names are supplied by members.",
+              )}
             </p>
           </>
         ) : (
           <div className="history">
-            {!history.length && <p>No check-ins yet.</p>}
+            {!history.length && <p>{t("No check-ins yet.")}</p>}
             {history.map((c) => (
               <p key={c.id}>
                 <b>{data.people.find((p) => p.id === c.person_id)?.name}</b> ·{" "}
@@ -970,16 +1004,17 @@ function CircleBoard({
                 {c.meeting_point && ` · ${c.meeting_point}`}
                 <br />
                 <small>
-                  {dateTime(c.contacted_at)} · confirmed by {c.reporter_name}
+                  {dateTime(c.contacted_at)} {t("· confirmed by")}{" "}
+                  {c.reporter_name}
                   {c.note && ` · ${c.note}`}
                   {c.context && ` · ${c.context}`}
-                  {c.located_at && " · Location snapshot shared"}
+                  {c.located_at && t(" · Location snapshot shared")}
                 </small>
               </p>
             ))}
             {cursor && (
               <button disabled={busy} onClick={() => void loadHistory(true)}>
-                Earlier check-ins
+                {t("Earlier check-ins")}
               </button>
             )}
           </div>
@@ -1003,28 +1038,33 @@ function CircleBoard({
               onClick={() => setSelected("")}
             >
               <ArrowLeft size={15} />
-              Back
+              {t("Back")}
             </button>
             <h2 id="checkin-title">
               {selected === data.member.person_id
-                ? "Your check-in"
-                : `Check on ${data.people.find((p) => p.id === selected)?.name}`}
+                ? t("Your check-in")
+                : t("Check on {name}", {
+                    name:
+                      data.people.find((p) => p.id === selected)?.name || "",
+                  })}
             </h2>
-            <p>Confirmed by {data.member.name} · now</p>
+            <p>
+              {t("Confirmed by")} {data.member.name} {t("· now")}
+            </p>
             {error && (
               <p role="alert" className="inline-error">
                 {error}
               </p>
             )}
             <label>
-              Note (optional)
+              {t("Note (optional)")}
               <input
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 placeholder={
                   selected === data.member.person_id
-                    ? "At home, all good…"
-                    : "Spoke by phone, with me…"
+                    ? t("At home, all good…")
+                    : t("Spoke by phone, with me…")
                 }
                 maxLength={500}
               />
@@ -1037,10 +1077,11 @@ function CircleBoard({
                   onChange={(e) => setIncludeLocation(e.target.checked)}
                 />
                 <span>
-                  Share my location with this circle for this check-in
+                  {t("Share my location with this circle for this check-in")}
                   <small>
-                    A one-time snapshot, visible to members. Never live
-                    tracking.
+                    {t(
+                      "A one-time snapshot, visible to members. Never live tracking.",
+                    )}
                   </small>
                 </span>
               </label>
@@ -1052,30 +1093,30 @@ function CircleBoard({
               >
                 <Check size={18} />
                 {selected === data.member.person_id
-                  ? "I’m okay"
-                  : "Reported okay"}
+                  ? t("I’m okay")
+                  : t("Reported okay")}
               </button>
               <button
                 disabled={busy}
                 onClick={() => void checkin("status", "help")}
               >
-                Needs help
+                {t("Needs help")}
               </button>
               <button
                 disabled={busy}
                 onClick={() => void checkin("status", "unknown")}
               >
-                Not confirmed
+                {t("Not confirmed")}
               </button>
             </div>
             <details className="presence-options">
-              <summary>Arrival or departure</summary>
+              <summary>{t("Arrival or departure")}</summary>
               <label>
-                Place
+                {t("Place")}
                 <input
                   value={place}
                   onChange={(e) => setPlace(e.target.value)}
-                  placeholder="Grandpa’s office, home…"
+                  placeholder={t("Grandpa’s office, home…")}
                   maxLength={200}
                 />
               </label>
@@ -1084,18 +1125,20 @@ function CircleBoard({
                   disabled={busy || !place.trim()}
                   onClick={() => void checkin("presence", "arrived")}
                 >
-                  Arrived
+                  {t("Arrived")}
                 </button>
                 <button
                   disabled={busy || !place.trim()}
                   onClick={() => void checkin("presence", "left")}
                 >
-                  Left
+                  {t("Left")}
                 </button>
               </div>
             </details>
             {offline && (
-              <small>This will stay pending until you send it online.</small>
+              <small>
+                {t("This will stay pending until you send it online.")}
+              </small>
             )}
           </section>
         </div>

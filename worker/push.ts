@@ -37,10 +37,10 @@ export async function enqueueReport(
   )
     return;
   const subs = await env.DB.prepare(
-    "SELECT id FROM push_subscriptions WHERE source=? AND min_magnitude<=?",
+    "SELECT id,locale FROM push_subscriptions WHERE source=? AND min_magnitude<=?",
   )
     .bind(report.source, report.magnitude)
-    .all<{ id: string }>();
+    .all<{ id: string; locale: string }>();
   if (
     report.latitude < 5 ||
     report.latitude > 11 ||
@@ -57,7 +57,7 @@ export async function enqueueReport(
         `${sub.id}:${id}`,
         sub.id,
         JSON.stringify({
-          title: `${report.source.toUpperCase()} · M ${report.magnitude.toFixed(1)}`,
+          title: `${sub.locale === "es" ? "Nuevo reporte" : "New report"} · ${report.source.toUpperCase()} · M ${report.magnitude.toFixed(1)}`,
           body: report.place,
           tag: id,
           url: "/",
@@ -88,6 +88,20 @@ export async function drainPush(env: Env, onlyJob?: string) {
       attempts: number;
     }>();
   for (const job of jobs.results) {
+    const claim = crypto.randomUUID();
+    const acquired = await env.DB.prepare(
+      "UPDATE push_outbox SET claim_token=?,claim_until=? WHERE id=? AND status='pending' AND expires_at>? AND next_attempt<=? AND (claim_until IS NULL OR claim_until<?) RETURNING id",
+    )
+      .bind(
+        claim,
+        Date.now() + 60000,
+        job.id,
+        Date.now(),
+        Date.now(),
+        Date.now(),
+      )
+      .first();
+    if (!acquired) continue;
     try {
       const subscription = JSON.parse(job.subscription) as PushSubscription;
       if (!validSubscription(subscription))
@@ -119,18 +133,19 @@ export async function drainPush(env: Env, onlyJob?: string) {
       }
       if (!res.ok) throw new Error(`Push service ${res.status}`);
       await env.DB.prepare(
-        "UPDATE push_outbox SET status='accepted',attempts=attempts+1,last_error=NULL WHERE id=?",
+        "UPDATE push_outbox SET status='accepted',attempts=attempts+1,last_error=NULL,claim_token=NULL,claim_until=NULL WHERE id=? AND claim_token=?",
       )
-        .bind(job.id)
+        .bind(job.id, claim)
         .run();
     } catch (e) {
       await env.DB.prepare(
-        "UPDATE push_outbox SET attempts=attempts+1,next_attempt=?,last_error=? WHERE id=?",
+        "UPDATE push_outbox SET attempts=attempts+1,next_attempt=?,last_error=?,claim_token=NULL,claim_until=NULL WHERE id=? AND claim_token=?",
       )
         .bind(
           Date.now() + Math.min(300000, 30000 * 2 ** job.attempts),
           String(e),
           job.id,
+          claim,
         )
         .run();
     }
@@ -164,7 +179,7 @@ app.post("/subscribe", async (c) => {
     );
   if (!existing) token = crypto.randomUUID() + crypto.randomUUID();
   await c.env.DB.prepare(
-    "INSERT INTO push_subscriptions(id,subscription,token_hash,source,min_magnitude,created_at) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET subscription=excluded.subscription,source=excluded.source,min_magnitude=excluded.min_magnitude",
+    "INSERT INTO push_subscriptions(id,subscription,token_hash,source,min_magnitude,created_at,locale) VALUES(?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET subscription=excluded.subscription,source=excluded.source,min_magnitude=excluded.min_magnitude,locale=excluded.locale",
   )
     .bind(
       id,
@@ -173,9 +188,25 @@ app.post("/subscribe", async (c) => {
       b.source,
       b.minMagnitude,
       Date.now(),
+      b.locale === "es" ? "es" : "en",
     )
     .run();
   return c.json({ id, token });
+});
+app.post("/locale", async (c) => {
+  const b = await c.req.json();
+  if (
+    typeof b.id !== "string" ||
+    typeof b.token !== "string" ||
+    !["en", "es"].includes(b.locale)
+  )
+    return c.json({ error: "Invalid notification settings" }, 400);
+  await c.env.DB.prepare(
+    "UPDATE push_subscriptions SET locale=? WHERE id=? AND token_hash=?",
+  )
+    .bind(b.locale, b.id, await digest(b.token))
+    .run();
+  return c.json({ ok: true });
 });
 app.post("/unsubscribe", async (c) => {
   const b = await c.req.json();
@@ -200,10 +231,10 @@ app.post("/test", async (c) => {
   if (typeof b.id !== "string" || typeof b.token !== "string")
     return c.json({ error: "Device credentials required" }, 400);
   const sub = await c.env.DB.prepare(
-    "SELECT id FROM push_subscriptions WHERE id=? AND token_hash=?",
+    "SELECT id,locale FROM push_subscriptions WHERE id=? AND token_hash=?",
   )
     .bind(b.id, await digest(b.token))
-    .first();
+    .first<{ id: string; locale: string }>();
   if (!sub) return c.json({ error: "Subscription not found" }, 404);
   const jobId = `test:${b.id}:${Math.floor(Date.now() / 60000)}`;
   await c.env.DB.prepare(
@@ -213,8 +244,12 @@ app.post("/test", async (c) => {
       jobId,
       b.id,
       JSON.stringify({
-        title: "Istmo is connected",
-        body: "This is a test notification. No earthquake is associated with it.",
+        title:
+          sub.locale === "es" ? "Istmo está conectado" : "Istmo is connected",
+        body:
+          sub.locale === "es"
+            ? "Esta es una notificación de prueba. No está asociada a ningún sismo."
+            : "This is a test notification. No earthquake is associated with it.",
         tag: "istmo-test",
         url: "/",
       }),

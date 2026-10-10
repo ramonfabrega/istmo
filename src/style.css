@@ -3335,3 +3335,45 @@ body {
   font-size: 13px;
   line-height: 1.6;
 }
+.language-picker {
+  width: 60px;
+  padding: 6px;
+  font-size: 12px;
+  background: transparent;
+  border-color: var(--line);
+  touch-action: manipulation;
+}
+.service-health {
+  grid-column: 1 / -1;
+}
+.service-health small {
+  color: var(--muted);
+}
+@media (max-width: 760px) {
+  .notification-channel-heading {
+    gap: 8px;
+  }
+  .notification-channel-heading h3 {
+    font-size: 13px;
+  }
+  .source-card-title {
+    flex-wrap: wrap;
+  }
+  .topbar-right {
+    gap: 8px;
+  }
+}
+.notification-button {
+  position: relative;
+}
+.notification-button.notifications-on {
+  color: var(--teal);
+}
+.notification-button.sound-paused {
+  color: var(--amber);
+}
+.sound-badge {
+  position: absolute;
+  right: 1px;
+  bottom: 3px;
+}

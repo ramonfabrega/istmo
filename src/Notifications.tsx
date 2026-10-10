@@ -1,3 +1,4 @@
+import { t } from "./i18n";
 import { useEffect, useState } from "react";
 import { X, Volume2, Bell } from "lucide-react";
 import {
@@ -6,7 +7,7 @@ import {
   type SoundMode,
 } from "./report-sound";
 import { InstallButton } from "./AppLifecycle";
-import { usePushNotifications } from "./push-notifications";
+import type { PushSettings } from "./push-notifications";
 
 function Toggle({
   label,
@@ -28,7 +29,7 @@ function Toggle({
       disabled={disabled}
       onClick={onChange}
     >
-      <span>{checked ? "On" : "Off"}</span>
+      <span>{checked ? t("On") : t("Off")}</span>
       <i aria-hidden="true" />
     </button>
   );
@@ -47,21 +48,21 @@ function Filters({
   return (
     <div className="sound-filters">
       <label>
-        Agency
+        {t("Agency")}
         <select value={source} onChange={(e) => setSource(e.target.value)}>
           <option value="up">Geociencias UP</option>
           <option value="usgs">USGS</option>
         </select>
       </label>
       <label>
-        Minimum magnitude
+        {t("Minimum magnitude")}
         <select
           value={magnitude}
           onChange={(e) => setMagnitude(Number(e.target.value))}
         >
           {[0, 3, 4, 5, 6].map((n) => (
             <option key={n} value={n}>
-              {n ? `M ${n}+` : "All"}
+              {n ? `M ${n}+` : t("All")}
             </option>
           ))}
         </select>
@@ -72,11 +73,12 @@ function Filters({
 export default function Notifications({
   close,
   sound,
+  push,
 }: {
   close: () => void;
   sound: ReportSound;
+  push: PushSettings;
 }) {
-  const push = usePushNotifications();
   const [previewMagnitude, setPreviewMagnitude] = useState(4);
   useEffect(() => {
     const dismiss = (event: KeyboardEvent) => {
@@ -96,35 +98,40 @@ export default function Notifications({
       >
         <button
           className="close"
-          aria-label="Close notifications"
+          aria-label={t("Close notifications")}
           onClick={close}
         >
           <X size={18} />
         </button>
-        <h2 id="notification-title">Notifications</h2>
-        <p className="notification-intro">Choose how Istmo reaches you.</p>
-        <section className="notification-channel" aria-label="Sound settings">
+        <h2 id="notification-title">{t("Notifications")}</h2>
+        <p className="notification-intro">
+          {t("Choose how Istmo reaches you.")}
+        </p>
+        <section
+          className="notification-channel"
+          aria-label={t("Sound settings")}
+        >
           <div className="notification-channel-heading">
             <Volume2 size={20} />
             <div>
-              <h3>Sound while open</h3>
-              <p>A chime, even in another tab.</p>
+              <h3>{t("Sound while open")}</h3>
+              <p>{t("A chime, even in another tab.")}</p>
             </div>
             <Toggle
-              label="Sound while open"
-              checked={sound.enabled}
+              label={t("Sound while open")}
+              checked={sound.preferred}
               onChange={() =>
-                sound.enabled ? sound.disable() : void sound.enable()
+                sound.preferred ? sound.disable() : void sound.enable()
               }
             />
           </div>
           {!sound.enabled && sound.preferred && (
             <p className="notification-hint">
-              Turn on again after reopening to allow audio.
+              {t("Sound is remembered. Tap anywhere in Istmo to resume audio.")}
             </p>
           )}
           <details className="notification-options">
-            <summary>Sound options</summary>
+            <summary>{t("Sound options")}</summary>
             <Filters
               source={sound.source}
               magnitude={sound.magnitude}
@@ -132,19 +139,21 @@ export default function Notifications({
               setMagnitude={sound.setMagnitude}
             />
             <label>
-              Chime
+              {t("Chime")}
               <select
                 value={sound.mode}
                 onChange={(e) => sound.setMode(e.target.value as SoundMode)}
               >
-                <option value="magnitude">Pitch follows magnitude</option>
-                <option value="simple">Same tone every time</option>
+                <option value="magnitude">
+                  {t("Pitch follows magnitude")}
+                </option>
+                <option value="simple">{t("Same tone every time")}</option>
               </select>
             </label>
             <div className="notification-preview">
               {sound.mode === "magnitude" && (
                 <label>
-                  Preview magnitude
+                  {t("Preview magnitude")}
                   <select
                     value={previewMagnitude}
                     onChange={(e) =>
@@ -163,12 +172,13 @@ export default function Notifications({
               <button
                 onClick={() => void sound.preview(previewMagnitude, sound.mode)}
               >
-                Play preview
+                {t("Play preview")}
               </button>
             </div>
             <p className="notification-hint">
-              Previewing doesn’t turn sound on. Browsers may pause background
-              audio.
+              {t(
+                "Previewing doesn’t turn sound on. Browsers may pause background audio.",
+              )}
             </p>
           </details>
           {sound.message && (
@@ -179,16 +189,16 @@ export default function Notifications({
         </section>
         <section
           className="notification-channel"
-          aria-label="Device notification settings"
+          aria-label={t("Device notification settings")}
         >
           <div className="notification-channel-heading">
             <Bell size={20} />
             <div>
-              <h3>Device notifications</h3>
-              <p>Reports when Istmo is closed.</p>
+              <h3>{t("Device notifications")}</h3>
+              <p>{t("Reports when Istmo is closed.")}</p>
             </div>
             <Toggle
-              label="Device notifications"
+              label={t("Device notifications")}
               checked={push.enabled}
               disabled={!push.supported || push.busy}
               onChange={() =>
@@ -198,13 +208,14 @@ export default function Notifications({
           </div>
           {!push.supported && (
             <p className="notification-hint">
-              On iPhone, add Istmo to your Home Screen and open it there.
-              Notifications need a supported browser and HTTPS.
+              {t(
+                "On iPhone, add Istmo to your Home Screen and open it there. Notifications need a supported browser and HTTPS.",
+              )}
             </p>
           )}
           {!push.supported && <InstallButton />}
           <details className="notification-options">
-            <summary>Notification options</summary>
+            <summary>{t("Notification options")}</summary>
             <Filters
               source={push.source}
               magnitude={push.magnitude}
@@ -214,10 +225,10 @@ export default function Notifications({
             {push.enabled && (
               <div className="notification-actions">
                 <button disabled={push.busy} onClick={() => void push.enable()}>
-                  Save changes
+                  {t("Save changes")}
                 </button>
                 <button disabled={push.busy} onClick={() => void push.test()}>
-                  Send test
+                  {t("Send test")}
                 </button>
               </div>
             )}
@@ -229,7 +240,7 @@ export default function Notifications({
           )}
         </section>
         <p className="notification-footer">
-          Panama and nearby waters. Agency reports, not early warnings.
+          {t("Panama and nearby waters. Agency reports, not early warnings.")}
         </p>
       </section>
     </div>

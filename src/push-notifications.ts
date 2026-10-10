@@ -1,3 +1,4 @@
+import { t, getLocale } from "./i18n";
 import { useState } from "react";
 import { api, safeRead, safeWrite } from "./api";
 const post = <T>(route: string, data: unknown) =>
@@ -26,13 +27,15 @@ export function usePushNotifications() {
       const permission = await Notification.requestPermission();
       if (permission !== "granted")
         throw new Error(
-          "Notifications were not allowed. You can change this in browser settings.",
+          t(
+            "Notifications were not allowed. You can change this in browser settings.",
+          ),
         );
       await navigator.serviceWorker.register("/sw.js");
       const reg = await navigator.serviceWorker.ready;
       const config = await api<{ publicKey: string }>("/api/push/config");
       if (!config.publicKey)
-        throw new Error("Server notification keys are not configured.");
+        throw new Error(t("Server notification keys are not configured."));
       const key = Uint8Array.from(
         atob(config.publicKey.replace(/-/g, "+").replace(/_/g, "/")),
         (c) => c.charCodeAt(0),
@@ -46,6 +49,7 @@ export function usePushNotifications() {
       const next = await post<{ id: string; token: string }>("subscribe", {
         subscription: subscription.toJSON(),
         source,
+        locale: getLocale(),
         minMagnitude: mag,
         token: device?.token,
       });
@@ -53,7 +57,9 @@ export function usePushNotifications() {
       safeWrite("istmo-push-device", next);
       safeWrite("istmo-push-source", source);
       safeWrite("istmo-push-mag", mag);
-      setMessage("Saved. New qualifying reports will be sent to this device.");
+      setMessage(
+        t("Saved. New qualifying reports will be sent to this device."),
+      );
     } catch (e) {
       setMessage(e instanceof Error ? e.message : String(e));
     } finally {
@@ -68,7 +74,7 @@ export function usePushNotifications() {
       await post("unsubscribe", device);
       safeWrite("istmo-push-device", null);
       setDevice(null);
-      setMessage("Device notifications are off.");
+      setMessage(t("Device notifications are off."));
       const registration = await navigator.serviceWorker.getRegistration();
       await (await registration?.pushManager.getSubscription())?.unsubscribe();
     } catch (error) {
@@ -83,7 +89,9 @@ export function usePushNotifications() {
     try {
       await post("test", device);
       setMessage(
-        "Accepted by the push service. Check your notifications; Focus or system settings may hide banners.",
+        t(
+          "Accepted by the push service. Check your notifications; Focus or system settings may hide banners.",
+        ),
       );
     } catch (error) {
       setMessage(error instanceof Error ? error.message : String(error));
@@ -106,3 +114,13 @@ export function usePushNotifications() {
     test,
   };
 }
+
+export async function syncPushLocale() {
+  const device = safeRead<{ id: string; token: string } | null>(
+    "istmo-push-device",
+    null,
+  );
+  if (device) await post("locale", { ...device, locale: getLocale() });
+}
+
+export type PushSettings = ReturnType<typeof usePushNotifications>;
