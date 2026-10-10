@@ -54,8 +54,8 @@ function database() {
 function html(times: number[]) {
   return `<table>${times
     .map((time) => {
-      const local = new Date(time - 5 * 3600000),
-        h = local.getUTCHours();
+      const local = new Date(time - 5 * 3600000);
+      const h = local.getUTCHours();
       const stamp = `${h % 12 || 12}:${String(local.getUTCMinutes()).padStart(2, "0")}:${String(local.getUTCSeconds()).padStart(2, "0")}${h >= 12 ? "PM" : "AM"}`;
       return `<tr>${["PRELIMINAR", local.toISOString().slice(0, 10), stamp, "7.62", "-81.44", "10km", "4.7", "Test location", '<a href="ultimosismo.html">Ver</a>'].map((c) => `<td>${c}</td>`).join("")}</tr>`;
     })
@@ -64,9 +64,9 @@ function html(times: number[]) {
 afterEach(() => vi.useRealTimers());
 it("persists bootstrap, corrections, incremental arrivals and withdrawals without duplicates", async () => {
   vi.useFakeTimers();
-  const now = Date.parse("2026-10-10T05:00:00Z"),
-    origin = now - 60000,
-    older = now - 600000;
+  const now = Date.parse("2026-10-10T05:00:00Z");
+  const origin = now - 60000;
+  const older = now - 600000;
   vi.setSystemTime(now);
   const { sqlite, env } = database();
   try {

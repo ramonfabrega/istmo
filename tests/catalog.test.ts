@@ -99,8 +99,8 @@ describe("UP snapshot reconciliation", () => {
 });
 
 it("only signals incremental recent reports, never bootstrap or outage catch-up", () => {
-  const now = 10000000,
-    r = row(now - 60000);
+  const now = 10000000;
+  const r = row(now - 60000);
   expect(newReportTime(r, null, now)).toBeNull();
   expect(newReportTime(r, now - 6 * 60000, now)).toBeNull();
   expect(newReportTime(row(now - 16 * 60000), now - 60000, now)).toBeNull();

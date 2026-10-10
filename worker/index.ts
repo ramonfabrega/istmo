@@ -3,7 +3,8 @@ import { bodyLimit } from "hono/body-limit";
 import type { Env } from "./env";
 import family from "./family";
 import push from "./push";
-import { collect, digest } from "./collect";
+import { collect } from "./collect";
+import { digest } from "./crypto";
 export { StationRelay } from "./relay";
 const app = new Hono<{ Bindings: Env }>();
 app.use(
@@ -14,8 +15,8 @@ app.use(
   }),
 );
 app.use("/api/*", async (c, next) => {
-  const origin = c.req.header("Origin"),
-    url = new URL(c.req.url);
+  const origin = c.req.header("Origin");
+  const url = new URL(c.req.url);
   if (
     origin &&
     origin !== url.origin &&
@@ -50,9 +51,9 @@ app.get("/api/health", (c) =>
   c.json({ ok: true, environment: c.env.APP_ENV, time: Date.now() }),
 );
 app.get("/api/reports", async (c) => {
-  const hours = Math.min(168, Math.max(1, Number(c.req.query("hours")) || 24)),
-    mag = Math.max(-2, Math.min(10, Number(c.req.query("magnitude")) || 0)),
-    scope = c.req.query("scope");
+  const hours = Math.min(168, Math.max(1, Number(c.req.query("hours")) || 24));
+  const mag = Math.max(-2, Math.min(10, Number(c.req.query("magnitude")) || 0));
+  const scope = c.req.query("scope");
   const args: unknown[] = [Date.now() - hours * 3600000, mag];
   let query =
     "SELECT * FROM reports WHERE withdrawn_at IS NULL AND occurred_at>=? AND magnitude>=?";
@@ -98,8 +99,8 @@ app.get("/api/stations/:id/stream", async (c) => {
   );
 });
 app.post("/api/stations/:id/records", async (c) => {
-  const stationId = c.req.param("id"),
-    auth = c.req.header("Authorization")?.replace(/^Bearer /, "");
+  const stationId = c.req.param("id");
+  const auth = c.req.header("Authorization")?.replace(/^Bearer /, "");
   const credentials = await c.env.DB.prepare(
     "SELECT token_hash FROM stations WHERE id=?",
   )

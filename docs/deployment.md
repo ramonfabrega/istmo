@@ -13,7 +13,7 @@ Public URL: https://istmo.ramonfabrega.com
 
 ## Release
 
-Run unit and local integration checks, then `bun run deploy`. This builds first, applies pending production migrations, and deploys the Worker only if migrations succeed. Wrangler records applied migrations; subsequent deploys skip them. Use additive, backward-compatible migrations: the old Worker remains live while the database changes, and a failed Worker deployment does not undo a completed migration. The build must use `CLOUDFLARE_ENV=production`; the generated `dist/istmo/wrangler.json` must have `APP_ENV=production` and the production D1 ID. Deploying a local build is not safe. `dist/client` is the only public asset directory.
+Run unit and local integration checks, then push to `main`. Cloudflare Builds compiles the production bundle, applies pending production migrations, and deploys the Worker only if migrations succeed. For an operator-triggered manual release, `bun run deploy` runs the same sequence locally. Wrangler records applied migrations; subsequent deploys skip them. Use additive, backward-compatible migrations: the old Worker remains live while the database changes, and a failed Worker deployment does not undo a completed migration. The build must use `CLOUDFLARE_ENV=production`; the generated `dist/istmo/wrangler.json` must have `APP_ENV=production` and the production D1 ID. Deploying a local build is not safe. `dist/client` is the only public asset directory.
 
 Secrets are uploaded separately with `bunx wrangler secret bulk .dev.vars.production --env production`. The private file is gitignored and must be backed up securely. Neither it nor `dist/istmo/.dev.vars` belongs in a public upload. Existing push subscriptions require the same VAPID key pair.
 
@@ -42,5 +42,3 @@ Connect the public `ramonfabrega/istmo` repository to the existing **istmo** Wor
 - Use `bun run test`, not `bun test`: the suite uses Vitest on Node, including `node:sqlite`.
 
 The Cloudflare build token needs permission to deploy this Worker and apply D1 migrations. Existing runtime secrets stay on the Worker; do not add `.dev.vars.production` to Git or upload those secrets as public build variables. No VAPID/private keys are needed to compile the app. Keep preview branches from deploying to production until a separate preview environment is configured.
-
-Launch verification on October 10, 2026: HTTPS UI and iPhone Safari map passed; source cron ran successfully at 00:43 and 00:44 Panama time; both feeds advanced without admin collection. The production database contained no test circles or replay station. Unit/collector tests (27), TypeScript, production build and local integration checks passed. Real-device background push remains a device test.

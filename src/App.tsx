@@ -60,40 +60,40 @@ export default function App() {
     else setView("people");
   };
   const [view, setView] = useState<View>(() =>
-      new URLSearchParams(location.hash.slice(1)).has("invite")
-        ? "people"
-        : "observatory",
-    ),
-    [reports, setReports] = useState<Report[]>(() =>
-      safeRead("istmo-reports", []),
-    ),
-    [sources, setSources] = useState<Source[]>(() =>
-      safeRead("istmo-sources", []),
-    ),
-    [stations, setStations] = useState<Station[]>([]),
-    [selected, setSelected] = useState<Report | null>(null),
-    [focusRequest, setFocusRequest] = useState<{
-      report: Report;
-      nonce: number;
-    } | null>(null),
-    [stationId, setStationId] = useState(""),
-    [hours, setHours] = useState(24),
-    [magnitude, setMagnitude] = useState(0),
-    [source, setSource] = useState("all"),
-    [scope, setScope] = useState("panama"),
-    [offline, setOffline] = useState(false),
-    [busy, setBusy] = useState(false),
-    [error, setError] = useState(""),
-    [clock, setClock] = useState(Date.now()),
-    [revisions, setRevisions] = useState<
-      Array<{ revision: number; observed_at: number; payload: string }>
-    >([]),
-    [activityOpen, setActivityOpen] = useState(false),
-    [sourceSection, setSourceSection] = useState<
-      "agencies" | "stations" | "about"
-    >("agencies"),
-    [showInfo, setShowInfo] = useState(false),
-    [showNotifications, setShowNotifications] = useState(false);
+    new URLSearchParams(location.hash.slice(1)).has("invite")
+      ? "people"
+      : "observatory",
+  );
+  const [reports, setReports] = useState<Report[]>(() =>
+    safeRead("istmo-reports", []),
+  );
+  const [sources, setSources] = useState<Source[]>(() =>
+    safeRead("istmo-sources", []),
+  );
+  const [stations, setStations] = useState<Station[]>([]);
+  const [selected, setSelected] = useState<Report | null>(null);
+  const [focusRequest, setFocusRequest] = useState<{
+    report: Report;
+    nonce: number;
+  } | null>(null);
+  const [stationId, setStationId] = useState("");
+  const [hours, setHours] = useState(24);
+  const [magnitude, setMagnitude] = useState(0);
+  const [source, setSource] = useState("all");
+  const [scope, setScope] = useState("panama");
+  const [offline, setOffline] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [clock, setClock] = useState(Date.now());
+  const [revisions, setRevisions] = useState<
+    Array<{ revision: number; observed_at: number; payload: string }>
+  >([]);
+  const [activityOpen, setActivityOpen] = useState(false);
+  const [sourceSection, setSourceSection] = useState<
+    "agencies" | "stations" | "about"
+  >("agencies");
+  const [showInfo, setShowInfo] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   useEffect(() => {
     const invitation = () => {
       if (new URLSearchParams(location.hash.slice(1)).has("invite"))

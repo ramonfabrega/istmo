@@ -39,8 +39,8 @@ function valid(r: ParsedReport) {
   );
 }
 export function parseUP(html: string): ParsedReport[] {
-  const $ = load(html),
-    out = new Map<string, ParsedReport>();
+  const $ = load(html);
+  const out = new Map<string, ParsedReport>();
   let invalid = 0;
   $("tr").each((_, tr) => {
     const cells = $(tr).children("td");
@@ -93,8 +93,8 @@ export function parseUSGS(data: unknown): ParsedReport[] {
   if (feed.type !== "FeatureCollection" || !Array.isArray(feed.features))
     throw new Error("Invalid USGS GeoJSON");
   return feed.features.flatMap((f) => {
-    const p = f.properties,
-      c = f.geometry?.coordinates;
+    const p = f.properties;
+    const c = f.geometry?.coordinates;
     if (!c || p.mag == null) return [];
     const url = String(p.url || "");
     const r: ParsedReport = {

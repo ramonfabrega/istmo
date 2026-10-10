@@ -54,9 +54,9 @@ export default function Globe({
   onDismiss?: () => void;
   onCircleToggle?: () => void;
 }) {
-  const el = useRef<HTMLDivElement>(null),
-    map = useRef<maplibregl.Map | null>(null),
-    latest = useRef({ reports, stations, onSelect, onStation, onDismiss });
+  const el = useRef<HTMLDivElement>(null);
+  const map = useRef<maplibregl.Map | null>(null);
+  const latest = useRef({ reports, stations, onSelect, onStation, onDismiss });
   latest.current = { reports, stations, onSelect, onStation, onDismiss };
   const circleRef = useRef(circle);
   circleRef.current = circle;
@@ -213,9 +213,9 @@ export default function Globe({
       circleRef.current?.onDismiss();
     }
   }, [selected]);
-  const [ready, setReady] = useState(false),
-    [error, setError] = useState(""),
-    [global, setGlobal] = useState(false);
+  const [ready, setReady] = useState(false);
+  const [error, setError] = useState("");
+  const [global, setGlobal] = useState(false);
   useEffect(() => {
     if (!el.current) return;
     let m: maplibregl.Map;

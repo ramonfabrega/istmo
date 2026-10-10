@@ -16,8 +16,8 @@ export default function CircleMap({
     null,
   );
   const data = snapshot?.id === session?.id ? snapshot?.data : undefined;
-  const [busy, setBusy] = useState(false),
-    [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
   const request = <T,>(
     path: string,
     body?: unknown,
@@ -77,12 +77,12 @@ export default function CircleMap({
   const onPlace = (name: string, latitude: number, longitude: number) =>
     mutate("/places", { name, latitude, longitude });
   const onRemove = (id: string) => mutate(`/places/${id}`, undefined, "DELETE");
-  const [picking, setPicking] = useState(false),
-    [draft, setDraft] = useState<{
-      latitude: number;
-      longitude: number;
-    } | null>(null),
-    [name, setName] = useState("");
+  const [picking, setPicking] = useState(false);
+  const [draft, setDraft] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+  const [name, setName] = useState("");
   const [selected, setSelected] = useState<CirclePin | null>(null);
   const [now, setNow] = useState(Date.now());
   useEffect(() => {

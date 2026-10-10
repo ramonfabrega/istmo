@@ -63,3 +63,13 @@ Example identifiers/times above illustrate the contract only. `gap` is a sequenc
 No hardware-specific driver or SeedLink bridge is included yet. A small always-on host beside an instrument should own acquisition, time synchronization, a durable disk spool, and HTTP retries. Existing seismology software can read miniSEED/SeedLink and serve as that adapter. Keep raw samples; attach instrument response/orientation/gain before offering physical units. A phone sensor experiment would be a separately labeled uncalibrated source and needs a native acquisition/background-power design. It is not currently part of this PWA.
 
 Before selecting hardware, establish the installation location/noise floor, useful frequency range, network/power availability, and whether the aim is a local motion display or participation in a wider calibrated network. The ingest contract does not depend on that hardware decision.
+
+## miniSEED implementation and checks
+
+`shared/miniseed.ts` is a narrow miniSEED 2 framing adapter, not a waveform codec. The Worker reads enough metadata to validate and route a record, then preserves its bytes. Browser decompression uses seisplotjs. The small int32 encoder exists only for recorded-fixture replay; a real instrument should send records produced by established acquisition software. Add miniSEED 3 or another instrument format through a maintained library/bridge when hardware requires it.
+
+Tests cover byte-preserving splits of 96 compressed fixture records, timestamps and corrections, both header byte orders, malformed blockettes, payload bounds, and replay counts decoded independently by seisplotjs. The local integration suite checks authenticated ingest, duplicate handling, binary WebSocket delivery and byte-exact archive retrieval.
+
+`bun run bench:miniseed` measures framing plus record copying after warm-up. A local Node 24 run on October 10, 2026 measured a median of 0.15 ms for 96 compressed records (384 KiB), and 0.90 ms for 715 replay records (704 KiB). This excludes decompression, network, storage and fan-out; it is not a production capacity test. Splitting now copies each record once instead of copying the entire remaining file on every iteration.
+
+Before adding physical stations, exercise their actual files and metadata, measure sustained relay/fan-out load, and batch archive writes. The present one-record-per-object archive is adequate for the development protocol, not the final storage strategy for an instrument network.

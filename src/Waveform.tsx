@@ -20,36 +20,36 @@ export default function Waveform({
 }: {
   station: Station | undefined;
 }) {
-  const canvas = useRef<HTMLCanvasElement>(null),
-    segments = useRef<Segment[]>([]),
-    pausedRef = useRef(false),
-    freeze = useRef(0),
-    frozenSegments = useRef<Segment[]>([]);
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const segments = useRef<Segment[]>([]);
+  const pausedRef = useRef(false);
+  const freeze = useRef(0);
+  const frozenSegments = useRef<Segment[]>([]);
   const [expanded, setExpanded] = useState(false);
-  const [paused, setPaused] = useState(false),
-    [channel, setChannel] = useState(""),
-    [channels, setChannels] = useState<string[]>([]),
-    [connected, setConnected] = useState(false),
-    [meta, setMeta] = useState<WaveMeta | null>(null),
-    [error, setError] = useState(""),
-    [windowSeconds, setWindowSeconds] = useState(60),
-    [now, setNow] = useState(Date.now()),
-    [archive, setArchive] = useState<
-      Array<{ id: string; start_time: number; bytes: number }>
-    >([]),
-    [showArchive, setShowArchive] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const [channel, setChannel] = useState("");
+  const [channels, setChannels] = useState<string[]>([]);
+  const [connected, setConnected] = useState(false);
+  const [meta, setMeta] = useState<WaveMeta | null>(null);
+  const [error, setError] = useState("");
+  const [windowSeconds, setWindowSeconds] = useState(60);
+  const [now, setNow] = useState(Date.now());
+  const [archive, setArchive] = useState<
+    Array<{ id: string; start_time: number; bytes: number }>
+  >([]);
+  const [showArchive, setShowArchive] = useState(false);
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, []);
   useEffect(() => {
     if (!station) return;
-    let ws: WebSocket,
-      timer: ReturnType<typeof setTimeout>,
-      ping: ReturnType<typeof setInterval>,
-      active = true,
-      pending: WaveMeta | null = null,
-      attempt = 0;
+    let ws: WebSocket;
+    let timer: ReturnType<typeof setTimeout>;
+    let ping: ReturnType<typeof setInterval>;
+    let active = true;
+    let pending: WaveMeta | null = null;
+    let attempt = 0;
     segments.current = [];
     frozenSegments.current = [];
     pausedRef.current = false;
@@ -126,19 +126,19 @@ export default function Waveform({
     };
   }, [station?.id]);
   useEffect(() => {
-    let frame = 0,
-      lastFrame = 0;
+    let frame = 0;
+    let lastFrame = 0;
     const render = (now: number) => {
       frame = requestAnimationFrame(render);
       if (now - lastFrame < 1000 / 30 || document.hidden) return;
       lastFrame = now;
       const c = canvas.current;
       if (!c) return;
-      const rect = c.getBoundingClientRect(),
-        dpr = Math.min(devicePixelRatio || 1, 2);
+      const rect = c.getBoundingClientRect();
+      const dpr = Math.min(devicePixelRatio || 1, 2);
       if (!rect.width || !rect.height) return;
-      const pixelWidth = Math.round(rect.width * dpr),
-        pixelHeight = Math.round(rect.height * dpr);
+      const pixelWidth = Math.round(rect.width * dpr);
+      const pixelHeight = Math.round(rect.height * dpr);
       if (c.width !== pixelWidth || c.height !== pixelHeight) {
         c.width = pixelWidth;
         c.height = pixelHeight;
@@ -146,10 +146,10 @@ export default function Waveform({
       const ctx = c.getContext("2d");
       if (!ctx) return;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const w = rect.width,
-        h = rect.height,
-        end = pausedRef.current ? freeze.current : Date.now() - 1200,
-        start = end - windowSeconds * 1000;
+      const w = rect.width;
+      const h = rect.height;
+      const end = pausedRef.current ? freeze.current : Date.now() - 1200;
+      const start = end - windowSeconds * 1000;
       ctx.clearRect(0, 0, w, h);
       ctx.strokeStyle = "#29404e";
       ctx.lineWidth = 1;
@@ -200,8 +200,8 @@ export default function Waveform({
             continue;
           }
           const x = ((t - start) / (end - start)) * w;
-          let lo = s.samples[i],
-            hi = lo;
+          let lo = s.samples[i];
+          let hi = lo;
           for (let j = i + 1; j < Math.min(i + step, s.samples.length); j++) {
             lo = Math.min(lo, s.samples[j]);
             hi = Math.max(hi, s.samples[j]);

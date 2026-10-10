@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import type { Env } from "./env";
-import { digest } from "./collect";
+import { digest } from "./crypto";
 type Member = {
   id: string;
   group_id: string;
@@ -23,17 +23,17 @@ async function invitation(db: D1Database, value: unknown) {
     .first<{ id: string; group_id: string; name: string }>();
 }
 app.post("/create", async (c) => {
-  const b = await c.req.json(),
-    name = clean(b.name),
-    reporter = clean(b.reporter);
+  const b = await c.req.json();
+  const name = clean(b.name);
+  const reporter = clean(b.reporter);
   if (!name || !reporter)
     return c.json({ error: "Circle name and your name are required" }, 400);
-  const id = crypto.randomUUID(),
-    member = crypto.randomUUID(),
-    person = crypto.randomUUID(),
-    access = token(),
-    invite = token(),
-    now = Date.now();
+  const id = crypto.randomUUID();
+  const member = crypto.randomUUID();
+  const person = crypto.randomUUID();
+  const access = token();
+  const invite = token();
+  const now = Date.now();
   await c.env.DB.batch([
     c.env.DB.prepare(
       "INSERT INTO family_groups(id,name,invite_hash,meeting_point,created_at) VALUES(?,?,?,?,?)",
@@ -61,8 +61,8 @@ app.post("/create", async (c) => {
 });
 // POST keeps invitation credentials out of request URLs and access logs.
 app.post("/invitation", async (c) => {
-  const b = await c.req.json(),
-    invite = await invitation(c.env.DB, b.invite);
+  const b = await c.req.json();
+  const invite = await invitation(c.env.DB, b.invite);
   if (!invite)
     return c.json(
       { error: "This invitation expired or was revoked. Ask for a new link." },
@@ -71,8 +71,8 @@ app.post("/invitation", async (c) => {
   return c.json({ id: invite.group_id, name: invite.name });
 });
 app.post("/join", async (c) => {
-  const b = await c.req.json(),
-    name = clean(b.name);
+  const b = await c.req.json();
+  const name = clean(b.name);
   if (!name) return c.json({ error: "Your name is required" }, 400);
   const invite = await invitation(c.env.DB, b.invite);
   if (!invite)
@@ -95,9 +95,9 @@ app.post("/join", async (c) => {
         name: invite.name,
       });
   }
-  const access = token(),
-    member = crypto.randomUUID(),
-    person = crypto.randomUUID();
+  const access = token();
+  const member = crypto.randomUUID();
+  const person = crypto.randomUUID();
   await c.env.DB.batch([
     c.env.DB.prepare("INSERT INTO people(id,group_id,name) VALUES(?,?,?)").bind(
       person,
@@ -176,9 +176,9 @@ app.get("/", async (c) => {
 });
 app.get("/history", async (c) => {
   const group = c.get("member").group_id;
-  const before = Number(c.req.query("before") || Number.MAX_SAFE_INTEGER),
-    beforeId = c.req.query("beforeId") || "~",
-    person = clean(c.req.query("person"));
+  const before = Number(c.req.query("before") || Number.MAX_SAFE_INTEGER);
+  const beforeId = c.req.query("beforeId") || "~";
+  const person = clean(c.req.query("person"));
   if (!Number.isFinite(before))
     return c.json({ error: "Invalid history cursor" }, 400);
   const rows = await c.env.DB.prepare(
@@ -186,8 +186,8 @@ app.get("/history", async (c) => {
   )
     .bind(group, person, person, before, before, beforeId)
     .all();
-  const items = rows.results.slice(0, 50),
-    last = items.at(-1);
+  const items = rows.results.slice(0, 50);
+  const last = items.at(-1);
   return c.json({
     items,
     next:
@@ -197,8 +197,8 @@ app.get("/history", async (c) => {
   });
 });
 app.post("/people", async (c) => {
-  const b = await c.req.json(),
-    name = clean(b.name);
+  const b = await c.req.json();
+  const name = clean(b.name);
   if (!name) return c.json({ error: "Name required" }, 400);
   const id = crypto.randomUUID();
   await c.env.DB.prepare("INSERT INTO people(id,group_id,name) VALUES(?,?,?)")
@@ -207,8 +207,8 @@ app.post("/people", async (c) => {
   return c.json({ id, name }, 201);
 });
 app.post("/checkins", async (c) => {
-  const b = await c.req.json(),
-    member = c.get("member");
+  const b = await c.req.json();
+  const member = c.get("member");
   if (
     !["status", "presence"].includes(b.kind) ||
     !(
@@ -224,13 +224,13 @@ app.post("/checkins", async (c) => {
     .bind(clean(b.personId), member.group_id)
     .first();
   if (!person) return c.json({ error: "Person not in this circle" }, 404);
-  const place = clean(b.meetingPoint, 200),
-    note = clean(b.note, 500),
-    context = clean(b.context);
+  const place = clean(b.meetingPoint, 200);
+  const note = clean(b.note, 500);
+  const context = clean(b.context);
   if (b.kind === "presence" && !place)
     return c.json({ error: "Add a place for an arrival or departure" }, 400);
-  const contacted = Number(b.contactedAt),
-    now = Date.now();
+  const contacted = Number(b.contactedAt);
+  const now = Date.now();
   if (
     !Number.isFinite(contacted) ||
     contacted > now + 60000 ||
@@ -306,9 +306,9 @@ app.post("/checkins", async (c) => {
   return c.json({ id }, 201);
 });
 app.post("/places", async (c) => {
-  const b = await c.req.json(),
-    m = c.get("member"),
-    name = clean(b.name);
+  const b = await c.req.json();
+  const m = c.get("member");
+  const name = clean(b.name);
   if (
     !name ||
     typeof b.latitude !== "number" ||
@@ -351,8 +351,8 @@ app.patch("/settings", async (c) => {
       { error: "Only the circle owner can change its settings" },
       403,
     );
-  const b = await c.req.json(),
-    name = clean(b.name);
+  const b = await c.req.json();
+  const name = clean(b.name);
   if (!name) return c.json({ error: "Circle name required" }, 400);
   await c.env.DB.prepare(
     "UPDATE family_groups SET name=?,meeting_point=? WHERE id=?",
@@ -362,10 +362,10 @@ app.patch("/settings", async (c) => {
   return c.json({ ok: true });
 });
 app.post("/invite", async (c) => {
-  const invite = token(),
-    member = c.get("member"),
-    now = Date.now(),
-    id = crypto.randomUUID();
+  const invite = token();
+  const member = c.get("member");
+  const now = Date.now();
+  const id = crypto.randomUUID();
   await c.env.DB.prepare(
     "INSERT INTO circle_invites(id,group_id,token_hash,created_by,created_at,expires_at) VALUES(?,?,?,?,?,?)",
   )

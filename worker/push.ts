@@ -5,11 +5,11 @@ import {
 } from "@block65/webcrypto-web-push";
 import type { Env } from "./env";
 import type { ParsedReport } from "./parsers";
-import { digest } from "./collect";
+import { digest } from "./crypto";
 export function validSubscription(s: unknown): s is PushSubscription {
   try {
-    const v = s as PushSubscription,
-      u = new URL(v.endpoint);
+    const v = s as PushSubscription;
+    const u = new URL(v.endpoint);
     return (
       u.protocol === "https:" &&
       !u.port &&
@@ -150,12 +150,12 @@ app.post("/subscribe", async (c) => {
     b.minMagnitude > 10
   )
     return c.json({ error: "Invalid notification settings" }, 400);
-  const id = await digest(b.subscription.endpoint),
-    existing = await c.env.DB.prepare(
-      "SELECT token_hash FROM push_subscriptions WHERE id=?",
-    )
-      .bind(id)
-      .first<{ token_hash: string }>();
+  const id = await digest(b.subscription.endpoint);
+  const existing = await c.env.DB.prepare(
+    "SELECT token_hash FROM push_subscriptions WHERE id=?",
+  )
+    .bind(id)
+    .first<{ token_hash: string }>();
   let token = b.token;
   if (existing && (!token || existing.token_hash !== (await digest(token))))
     return c.json(

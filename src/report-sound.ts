@@ -80,8 +80,8 @@ export function useReportSound() {
       [0, base],
       [0.19, (base * 4) / 3],
     ]) {
-      const oscillator = audio.createOscillator(),
-        gain = audio.createGain();
+      const oscillator = audio.createOscillator();
+      const gain = audio.createGain();
       const start = audio.currentTime + offset;
       oscillator.frequency.value = frequency;
       gain.gain.setValueAtTime(0, start);
@@ -151,9 +151,9 @@ export function useReportSound() {
   }, [source, magnitude, mode]);
   useEffect(() => {
     if (!enabled) return;
-    let active = true,
-      inFlight = false,
-      initialized = false;
+    let active = true;
+    let inFlight = false;
+    let initialized = false;
     let since = Date.now();
     const seen = new Set<string>();
     const poll = async () => {

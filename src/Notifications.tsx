@@ -1,11 +1,73 @@
-import { useState } from "react";
-import { Bell, X } from "lucide-react";
-import { api, safeRead, safeWrite } from "./api";
+import { useEffect, useState } from "react";
+import { X, Volume2, Bell } from "lucide-react";
 import {
   magnitudeBands,
   type ReportSound,
   type SoundMode,
 } from "./report-sound";
+import { usePushNotifications } from "./push-notifications";
+
+function Toggle({
+  label,
+  checked,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  disabled?: boolean;
+  onChange: () => void;
+}) {
+  return (
+    <button
+      className="notification-toggle"
+      role="switch"
+      aria-label={label}
+      aria-checked={checked}
+      disabled={disabled}
+      onClick={onChange}
+    >
+      <span>{checked ? "On" : "Off"}</span>
+      <i aria-hidden="true" />
+    </button>
+  );
+}
+function Filters({
+  source,
+  magnitude,
+  setSource,
+  setMagnitude,
+}: {
+  source: string;
+  magnitude: number;
+  setSource: (value: string) => void;
+  setMagnitude: (value: number) => void;
+}) {
+  return (
+    <div className="sound-filters">
+      <label>
+        Agency
+        <select value={source} onChange={(e) => setSource(e.target.value)}>
+          <option value="up">Geociencias UP</option>
+          <option value="usgs">USGS</option>
+        </select>
+      </label>
+      <label>
+        Minimum magnitude
+        <select
+          value={magnitude}
+          onChange={(e) => setMagnitude(Number(e.target.value))}
+        >
+          {[0, 3, 4, 5, 6].map((n) => (
+            <option key={n} value={n}>
+              {n ? `M ${n}+` : "All"}
+            </option>
+          ))}
+        </select>
+      </label>
+    </div>
+  );
+}
 export default function Notifications({
   close,
   sound,
@@ -13,68 +75,19 @@ export default function Notifications({
   close: () => void;
   sound: ReportSound;
 }) {
-  const [source, setSource] = useState(safeRead("istmo-push-source", "up")),
-    [mag, setMag] = useState(safeRead("istmo-push-mag", 4)),
-    [device, setDevice] = useState<{ id: string; token: string } | null>(
-      safeRead("istmo-push-device", null),
-    ),
-    [message, setMessage] = useState(""),
-    [busy, setBusy] = useState(false);
-  const supported =
-    window.isSecureContext &&
-    "serviceWorker" in navigator &&
-    "PushManager" in window &&
-    "Notification" in window;
-  const post = <T,>(route: string, data: unknown) =>
-    api<T>("/api/push/" + route, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-  async function enable() {
-    setBusy(true);
-    try {
-      const permission = await Notification.requestPermission();
-      if (permission !== "granted")
-        throw new Error(
-          "Notifications were not allowed. You can change this in browser settings.",
-        );
-      await navigator.serviceWorker.register("/sw.js");
-      const reg = await navigator.serviceWorker.ready;
-      const config = await api<{ publicKey: string }>("/api/push/config");
-      if (!config.publicKey)
-        throw new Error("Server notification keys are not configured.");
-      const key = Uint8Array.from(
-        atob(config.publicKey.replace(/-/g, "+").replace(/_/g, "/")),
-        (c) => c.charCodeAt(0),
-      );
-      const subscription =
-        (await reg.pushManager.getSubscription()) ||
-        (await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: key,
-        }));
-      const next = await post<{ id: string; token: string }>("subscribe", {
-        subscription: subscription.toJSON(),
-        source,
-        minMagnitude: mag,
-        token: device?.token,
-      });
-      setDevice(next);
-      safeWrite("istmo-push-device", next);
-      safeWrite("istmo-push-source", source);
-      safeWrite("istmo-push-mag", mag);
-      setMessage("Saved. New qualifying reports will be sent to this device.");
-    } catch (e) {
-      setMessage(String(e));
-    } finally {
-      setBusy(false);
-    }
-  }
+  const push = usePushNotifications();
+  const [previewMagnitude, setPreviewMagnitude] = useState(4);
+  useEffect(() => {
+    const dismiss = (event: KeyboardEvent) => {
+      if (event.key === "Escape") close();
+    };
+    window.addEventListener("keydown", dismiss);
+    return () => window.removeEventListener("keydown", dismiss);
+  }, [close]);
   return (
     <div className="modal-backdrop" onClick={close}>
       <section
-        className="about-modal"
+        className="about-modal notification-panel"
         role="dialog"
         aria-modal="true"
         aria-labelledby="notification-title"
@@ -87,187 +100,134 @@ export default function Notifications({
         >
           <X size={18} />
         </button>
-        <Bell size={27} />
-        <h2 id="notification-title">Notifications & sound.</h2>
-        <section className="sound-settings">
-          <h3>Sound while Istmo is open</h3>
-          <p>
-            A gentle chime for new Panama reports, including in a background
-            tab. Browsers can pause background activity; use push notifications
-            when the app is closed.
-          </p>
-          <div className="sound-filters">
-            <label>
-              Agency
-              <select
-                value={sound.source}
-                onChange={(e) => sound.setSource(e.target.value)}
-              >
-                <option value="up">Geociencias UP</option>
-                <option value="usgs">USGS</option>
-              </select>
-            </label>
-            <label>
-              Magnitude
-              <select
-                value={sound.magnitude}
-                onChange={(e) => sound.setMagnitude(Number(e.target.value))}
-              >
-                {[0, 3, 4, 5, 6].map((n) => (
-                  <option key={n} value={n}>
-                    {n ? `M ${n}+` : "All"}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          <label className="spaced">
-            Chime style
-            <select
-              value={sound.mode}
-              onChange={(e) => sound.setMode(e.target.value as SoundMode)}
-            >
-              <option value="simple">Simple</option>
-              <option value="magnitude">Magnitude chime</option>
-            </select>
-          </label>
-          {sound.mode === "magnitude" && (
-            <div className="magnitude-preview">
-              <p>Higher pitch for stronger reports. Tap to listen:</p>
-              <div
-                className="magnitude-preview-grid"
-                role="group"
-                aria-label="Preview magnitude bands"
-              >
-                {magnitudeBands.map((band) => (
-                  <button
-                    key={band.magnitude}
-                    title={`${band.note} · ${band.magnitude === 3 ? "Below M 3.5" : band.magnitude === 6.5 ? "M 6.5 and above" : `M ${band.magnitude}–${(band.magnitude + 0.49).toFixed(2)}`}`}
-                    aria-label={`Preview magnitude ${band.magnitude.toFixed(1)}`}
-                    onClick={() =>
-                      void sound.preview(band.magnitude, "magnitude")
-                    }
-                  >
-                    <span>
-                      M {band.magnitude.toFixed(1)}
-                      {band.magnitude === 6.5 ? "+" : ""}
-                    </span>
-                    <small>{band.note}</small>
-                  </button>
-                ))}
-              </div>
-              <p>
-                <small>
-                  Below M3 uses the lowest tone; M6.5+ uses the highest. If
-                  reports arrive together, one chime represents the strongest.
-                  Previews don’t enable alerts.
-                </small>
-              </p>
+        <h2 id="notification-title">Notifications</h2>
+        <p className="notification-intro">Choose how Istmo reaches you.</p>
+        <section className="notification-channel" aria-label="Sound settings">
+          <div className="notification-channel-heading">
+            <Volume2 size={20} />
+            <div>
+              <h3>Sound while open</h3>
+              <p>A chime, even in another tab.</p>
             </div>
-          )}
-          <div className="status-options">
-            <button
-              className={sound.enabled ? "" : "primary"}
-              onClick={() =>
+            <Toggle
+              label="Sound while open"
+              checked={sound.enabled}
+              onChange={() =>
                 sound.enabled ? sound.disable() : void sound.enable()
               }
-            >
-              {sound.enabled
-                ? "Turn sound off"
-                : sound.preferred
-                  ? "Resume sound"
-                  : "Enable sound"}
-            </button>
-            <button onClick={() => void sound.test()}>Test sound</button>
+            />
           </div>
-          <small role="status">
-            {sound.message ||
-              (sound.preferred
-                ? "Tap Resume after reopening the app to allow audio."
-                : "Off by default. Enabling plays a preview.")}
-          </small>
-        </section>
-        <h3>Push notifications</h3>
-        <p>
-          Choose one agency for notifications to avoid duplicate reports from
-          different sources. Coverage: Panama and nearby waters.
-        </p>
-        <label>
-          Source
-          <select value={source} onChange={(e) => setSource(e.target.value)}>
-            <option value="up">Geociencias UP</option>
-            <option value="usgs">USGS</option>
-          </select>
-        </label>
-        <label className="spaced">
-          Minimum magnitude
-          <select value={mag} onChange={(e) => setMag(Number(e.target.value))}>
-            {[3, 4, 5, 6].map((n) => (
-              <option key={n} value={n}>
-                M {n}+
-              </option>
-            ))}
-          </select>
-        </label>
-        {!supported && (
-          <p className="inline-error">
-            Open the private HTTPS address. On iPhone, add Istmo to your Home
-            Screen and open it there to enable notifications.
-          </p>
-        )}
-        <div className="status-options">
-          <button
-            className="primary"
-            disabled={!supported || busy}
-            onClick={() => void enable()}
-          >
-            {device ? "Save preferences" : "Enable notifications"}
-          </button>
-          {device && (
-            <>
-              <button
-                disabled={busy}
-                onClick={async () => {
-                  try {
-                    await post("test", device);
-                    setMessage(
-                      "Test queued. A push-service acknowledgment is not confirmation that your phone displayed it.",
-                    );
-                  } catch (e) {
-                    setMessage(String(e));
-                  }
-                }}
-              >
-                Send a test
-              </button>
-              <button
-                onClick={async () => {
-                  try {
-                    await post("unsubscribe", device);
-                    const reg = await navigator.serviceWorker.ready;
-                    await (
-                      await reg.pushManager.getSubscription()
-                    )?.unsubscribe();
-                    safeWrite("istmo-push-device", null);
-                    setDevice(null);
-                    setMessage("Notifications disabled.");
-                  } catch (e) {
-                    setMessage(String(e));
-                  }
-                }}
-              >
-                Disable
-              </button>
-            </>
+          {!sound.enabled && sound.preferred && (
+            <p className="notification-hint">
+              Turn on again after reopening to allow audio.
+            </p>
           )}
-        </div>
-        {message && <p role="status">{message}</p>}
-        <p>
-          <small>
-            Published reports, not early warnings. Notifications depend on
-            agency publication and device delivery. Historical imports do not
-            trigger a backlog of notifications.
-          </small>
+          <details className="notification-options">
+            <summary>Sound options</summary>
+            <Filters
+              source={sound.source}
+              magnitude={sound.magnitude}
+              setSource={sound.setSource}
+              setMagnitude={sound.setMagnitude}
+            />
+            <label>
+              Chime
+              <select
+                value={sound.mode}
+                onChange={(e) => sound.setMode(e.target.value as SoundMode)}
+              >
+                <option value="magnitude">Pitch follows magnitude</option>
+                <option value="simple">Same tone every time</option>
+              </select>
+            </label>
+            <div className="notification-preview">
+              {sound.mode === "magnitude" && (
+                <label>
+                  Preview magnitude
+                  <select
+                    value={previewMagnitude}
+                    onChange={(e) =>
+                      setPreviewMagnitude(Number(e.target.value))
+                    }
+                  >
+                    {magnitudeBands.map((b) => (
+                      <option key={b.magnitude} value={b.magnitude}>
+                        M {b.magnitude.toFixed(1)}
+                        {b.magnitude === 6.5 ? "+" : ""}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              <button
+                onClick={() => void sound.preview(previewMagnitude, sound.mode)}
+              >
+                Play preview
+              </button>
+            </div>
+            <p className="notification-hint">
+              Previewing doesn’t turn sound on. Browsers may pause background
+              audio.
+            </p>
+          </details>
+          {sound.message && (
+            <p className="notification-feedback" role="status">
+              {sound.message}
+            </p>
+          )}
+        </section>
+        <section
+          className="notification-channel"
+          aria-label="Device notification settings"
+        >
+          <div className="notification-channel-heading">
+            <Bell size={20} />
+            <div>
+              <h3>Device notifications</h3>
+              <p>Reports when Istmo is closed.</p>
+            </div>
+            <Toggle
+              label="Device notifications"
+              checked={push.enabled}
+              disabled={!push.supported || push.busy}
+              onChange={() =>
+                void (push.enabled ? push.disable() : push.enable())
+              }
+            />
+          </div>
+          {!push.supported && (
+            <p className="notification-hint">
+              On iPhone, add Istmo to your Home Screen and open it there.
+              Notifications need a supported browser and HTTPS.
+            </p>
+          )}
+          <details className="notification-options">
+            <summary>Notification options</summary>
+            <Filters
+              source={push.source}
+              magnitude={push.magnitude}
+              setSource={push.setSource}
+              setMagnitude={push.setMagnitude}
+            />
+            {push.enabled && (
+              <div className="notification-actions">
+                <button disabled={push.busy} onClick={() => void push.enable()}>
+                  Save changes
+                </button>
+                <button disabled={push.busy} onClick={() => void push.test()}>
+                  Send test
+                </button>
+              </div>
+            )}
+          </details>
+          {push.message && (
+            <p className="notification-feedback" role="status">
+              {push.message}
+            </p>
+          )}
+        </section>
+        <p className="notification-footer">
+          Panama and nearby waters. Agency reports, not early warnings.
         </p>
       </section>
     </div>

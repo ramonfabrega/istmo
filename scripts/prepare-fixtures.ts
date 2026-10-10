@@ -21,8 +21,8 @@ const records = parseDataRecords(
 const z = records.filter((r) => r.header.chanCode === "EHZ");
 const output: Buffer[] = [];
 for (const r of z) {
-  const data = r.decompress(),
-    rate = r.header.sampleRate;
+  const data = r.decompress();
+  const rate = r.header.sampleRate;
   for (let offset = 0; offset < data.length; offset += rate) {
     const samples = Int32Array.from(data.slice(offset, offset + rate));
     output.push(

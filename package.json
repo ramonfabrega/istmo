@@ -19,7 +19,8 @@
     "build:production": "tsc --noEmit && CLOUDFLARE_ENV=production vite build",
     "db:migrate:production": "wrangler d1 migrations apply DB --config wrangler.jsonc --env production --remote",
     "deploy": "bun run build:production && bun run deploy:production",
-    "deploy:production": "bun run db:migrate:production && wrangler deploy --config dist/istmo/wrangler.json"
+    "deploy:production": "bun run db:migrate:production && wrangler deploy --config dist/istmo/wrangler.json",
+    "bench:miniseed": "node --import tsx scripts/bench-miniseed.ts"
   },
   "dependencies": {
     "@block65/webcrypto-web-push": "^2.0.0",

@@ -1,15 +1,15 @@
 import fs from "node:fs";
 import { splitRecords, header } from "../shared/miniseed";
 import { config } from "./config";
-const cfg = config(),
-  input = fs.readFileSync("fixtures/replay.mseed"),
-  records = splitRecords(
-    input.buffer.slice(input.byteOffset, input.byteOffset + input.byteLength),
-  );
-const session = crypto.randomUUID(),
-  delay = Number(process.env.GAP_EVERY) || 0;
-let sequence = 0,
-  stopped = false;
+const cfg = config();
+const input = fs.readFileSync("fixtures/replay.mseed");
+const records = splitRecords(
+  input.buffer.slice(input.byteOffset, input.byteOffset + input.byteLength),
+);
+const session = crypto.randomUUID();
+const delay = Number(process.env.GAP_EVERY) || 0;
+let sequence = 0;
+let stopped = false;
 process.on("SIGINT", () => {
   stopped = true;
 });
@@ -19,9 +19,9 @@ console.log(
 while (!stopped) {
   for (const record of records) {
     if (stopped) break;
-    const h = header(record),
-      start = Date.now(),
-      seq = sequence++;
+    const h = header(record);
+    const start = Date.now();
+    const seq = sequence++;
     if (delay && seq > 0 && seq % delay === 0) {
       await new Promise((r) => setTimeout(r, 5000));
       continue;

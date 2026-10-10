@@ -1,3 +1,4 @@
+import { digest } from "./crypto";
 import { reconcileUP, newReportTime, type StoredReport } from "./catalog";
 import type { Env } from "./env";
 import { parseUP, parseUSGS, type ParsedReport } from "./parsers";
@@ -6,22 +7,13 @@ export const sourceUrls = {
   up: "https://sismosgeociencias.up.ac.pa/",
   usgs: "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson",
 };
-export async function digest(value: string) {
-  const b = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(value),
-  );
-  return [...new Uint8Array(b)]
-    .map((x) => x.toString(16).padStart(2, "0"))
-    .join("");
-}
 export async function storeReports(
   env: Env,
   source: "up" | "usgs",
   raw: string,
 ) {
-  const now = Date.now(),
-    reports = source === "up" ? parseUP(raw) : parseUSGS(JSON.parse(raw));
+  const now = Date.now();
+  const reports = source === "up" ? parseUP(raw) : parseUSGS(JSON.parse(raw));
   await env.ARCHIVE.put(
     `sources/${source}/${now}.${source === "up" ? "html" : "json"}`,
     raw,

@@ -21,10 +21,10 @@ export class StationRelay extends DurableObject<Env> {
     if (request.method !== "POST")
       return new Response("Not found", { status: 404 });
     return this.ctx.blockConcurrencyWhile(async () => {
-      const station = url.searchParams.get("station")!,
-        session = url.searchParams.get("session")!,
-        sequence = Number(url.searchParams.get("sequence")),
-        start = Number(url.searchParams.get("start"));
+      const station = url.searchParams.get("station")!;
+      const session = url.searchParams.get("session")!;
+      const sequence = Number(url.searchParams.get("sequence"));
+      const start = Number(url.searchParams.get("start"));
       if (
         !/^[a-zA-Z0-9_-]{1,80}$/.test(session) ||
         !Number.isSafeInteger(sequence) ||
@@ -81,8 +81,8 @@ export class StationRelay extends DurableObject<Env> {
           "Live timestamps must match the instrument record",
           { status: 400 },
         );
-      const now = Date.now(),
-        key = `waveforms/${station}/${session}/${sequence}.mseed`;
+      const now = Date.now();
+      const key = `waveforms/${station}/${session}/${sequence}.mseed`;
       await this.env.ARCHIVE.put(key, bytes, {
         httpMetadata: { contentType: "application/vnd.fdsn.mseed" },
       });

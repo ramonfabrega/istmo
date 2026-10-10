@@ -23,8 +23,8 @@ const timeFormat = (seconds: boolean) =>
     hour12: true,
     ...(seconds ? { second: "2-digit" as const } : {}),
   });
-const minuteFormat = timeFormat(false),
-  secondFormat = timeFormat(true);
+const minuteFormat = timeFormat(false);
+const secondFormat = timeFormat(true);
 const dateFormat = new Intl.DateTimeFormat("en", {
   timeZone: "America/Panama",
   month: "short",

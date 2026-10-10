@@ -357,15 +357,15 @@ assert.equal(
   400,
 );
 console.log("PASS circle authorization and ingestion validation");
-const session = "integration-" + crypto.randomUUID(),
-  seq = 0,
-  start = Date.now(),
-  path = `/api/stations/replay-panama/records?session=${session}&sequence=${seq}&start=${start}`,
-  record = encodeInt32(
-    Int32Array.from([1, -1, 42]),
-    Date.parse("2010-02-06T04:50:15Z"),
-    200,
-  );
+const session = "integration-" + crypto.randomUUID();
+const seq = 0;
+const start = Date.now();
+const path = `/api/stations/replay-panama/records?session=${session}&sequence=${seq}&start=${start}`;
+const record = encodeInt32(
+  Int32Array.from([1, -1, 42]),
+  Date.parse("2010-02-06T04:50:15Z"),
+  200,
+);
 let response = await fetch(cfg.url + path, { method: "POST", body: record });
 assert.equal(response.status, 401);
 const socket = new WebSocket(

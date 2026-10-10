@@ -76,8 +76,8 @@ export default function Family({
     () => savedCircles()[0]?.reporter || "",
   );
   const [name, setName] = useState("");
-  const [busy, setBusy] = useState(false),
-    [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
   const previewRequest = useRef(0);
   const initialInvitation = useRef(incomingCode());
   const session = sessions.find((s) => s.id === active) || sessions[0];
@@ -381,30 +381,31 @@ function CircleBoard({
   onRename: (s: string) => void;
   onForget: () => void;
 }) {
-  const cacheKey = `istmo-circle:${session.id}`,
-    queueKey = `istmo-pending:${session.id}`;
+  const cacheKey = `istmo-circle:${session.id}`;
+  const queueKey = `istmo-pending:${session.id}`;
   const [data, setData] = useState<FamilyData | null>(() =>
     safeRead(cacheKey, null),
   );
   const [queue, setQueue] = useState<Pending[]>(() => safeRead(queueKey, []));
-  const [error, setError] = useState(""),
-    [busy, setBusy] = useState(false),
-    [offline, setOffline] = useState(!navigator.onLine);
-  const [selected, setSelected] = useState(""),
-    [note, setNote] = useState(""),
-    [place, setPlace] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [offline, setOffline] = useState(!navigator.onLine);
+  const [selected, setSelected] = useState("");
+  const [note, setNote] = useState("");
+  const [place, setPlace] = useState("");
   const [includeLocation, setIncludeLocation] = useState(false);
-  const [newPerson, setNewPerson] = useState(""),
-    [edit, setEdit] = useState(false),
-    [forget, setForget] = useState(false);
+  const [newPerson, setNewPerson] = useState("");
+  const [edit, setEdit] = useState(false);
+  const [forget, setForget] = useState(false);
   const [settings, setSettings] = useState({
     name: session.name,
     meetingPoint: "",
   });
-  const [history, setHistory] = useState<Checkin[] | null>(null),
-    [cursor, setCursor] = useState<{ before: number; beforeId: string } | null>(
-      null,
-    );
+  const [history, setHistory] = useState<Checkin[] | null>(null);
+  const [cursor, setCursor] = useState<{
+    before: number;
+    beforeId: string;
+  } | null>(null);
   const [members, setMembers] = useState<Array<{
     id: string;
     name: string;
@@ -412,8 +413,8 @@ function CircleBoard({
     revoked_at: number | null;
   }> | null>(null);
   const [removeMember, setRemoveMember] = useState<string | null>(null);
-  const [invites, setInvites] = useState<InviteInfo[] | null>(null),
-    [copied, setCopied] = useState(false);
+  const [invites, setInvites] = useState<InviteInfo[] | null>(null);
+  const [copied, setCopied] = useState(false);
   useEffect(() => {
     if (!copied) return;
     const timer = setTimeout(() => setCopied(false), 2500);
@@ -462,8 +463,8 @@ function CircleBoard({
     mounted.current = true;
     void refresh();
     const timer = setInterval(() => void refresh(), 15000);
-    const online = () => void refresh(),
-      off = () => setOffline(true);
+    const online = () => void refresh();
+    const off = () => setOffline(true);
     window.addEventListener("online", online);
     window.addEventListener("offline", off);
     return () => {
@@ -874,8 +875,8 @@ function CircleBoard({
           <>
             <div className="people-list">
               {data.people.map((p) => {
-                const status = latest(p.id, "status"),
-                  presence = latest(p.id, "presence");
+                const status = latest(p.id, "status");
+                const presence = latest(p.id, "presence");
                 return (
                   <article className="person" key={p.id}>
                     <div className="avatar">
