@@ -41,6 +41,6 @@ Production runs on Cloudflare Workers, D1, R2 and Durable Objects. Git pushes to
 - [Local development](docs/local-development.md)
 - [Deployment](docs/deployment.md)
 
-Next: verify background push on real devices, add owner recovery/new-device linking, and connect calibrated hardware with batched archive storage.
+Next: monitor delivery and UI freshness on real devices, add collection-outage alerts and owner recovery/new-device linking, and connect calibrated hardware with batched archive storage. See [performance diagnostics](docs/performance.md) for tracing and measured results.
 
 See [capacity and freshness](docs/scaling.md) for load-test results and the private active-viewer command.
