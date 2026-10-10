@@ -202,3 +202,120 @@ it("stores a device language securely and uses it for test notifications", async
     sqlite.close();
   }
 });
+
+it("does not make a fast device wait for a slow device", async () => {
+  const { sqlite, env } = await setup();
+  let release!: () => void;
+  const slow = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let calls = 0;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => {
+      if (++calls === 1) await slow;
+      return new Response(null, { status: 201 });
+    }),
+  );
+  for (const id of ["slow", "fast"])
+    sqlite
+      .prepare(
+        "INSERT INTO push_outbox(id,subscription_id,payload,next_attempt,expires_at) VALUES(?,'device','{}',?,?)",
+      )
+      .run(id, Date.now(), Date.now() + 60000);
+  const task = drainPush(env);
+  try {
+    await expect
+      .poll(
+        () =>
+          sqlite
+            .prepare(
+              "SELECT count(*) AS n FROM push_outbox WHERE status='accepted'",
+            )
+            .get()?.n,
+        { timeout: 300 },
+      )
+      .toBe(1);
+  } finally {
+    release();
+    await task;
+    sqlite.close();
+  }
+});
+
+it("drains beyond the old 25-device limit with bounded concurrency and high urgency", async () => {
+  const { sqlite, env } = await setup();
+  let active = 0;
+  let peak = 0;
+  const send = vi.fn(async (_url, request) => {
+    expect(new Headers(request.headers).get("urgency")).toBe("high");
+    active++;
+    peak = Math.max(peak, active);
+    await new Promise((resolve) => setTimeout(resolve, 2));
+    active--;
+    return new Response(null, { status: 201 });
+  });
+  vi.stubGlobal("fetch", send);
+  try {
+    for (let i = 0; i < 130; i++)
+      sqlite
+        .prepare(
+          "INSERT INTO push_outbox(id,subscription_id,payload,next_attempt,expires_at) VALUES(?,'device','{}',?,?)",
+        )
+        .run(`batch:${i}`, Date.now(), Date.now() + 60000);
+    await drainPush(env);
+    expect(
+      sqlite
+        .prepare(
+          "SELECT count(*) AS n FROM push_outbox WHERE status='accepted'",
+        )
+        .get()?.n,
+    ).toBe(130);
+    expect(peak).toBeGreaterThan(1);
+    expect(peak).toBeLessThanOrEqual(8);
+  } finally {
+    sqlite.close();
+  }
+});
+
+it("preserves receipt identity and first-attempt timing across a provider retry", async () => {
+  const { sqlite, env } = await setup();
+  const send = vi
+    .fn()
+    .mockResolvedValueOnce(new Response(null, { status: 503 }))
+    .mockResolvedValueOnce(new Response(null, { status: 201 }));
+  vi.stubGlobal("fetch", send);
+  try {
+    const now = Date.now();
+    sqlite
+      .prepare(
+        "INSERT INTO push_outbox(id,subscription_id,payload,next_attempt,expires_at,queued_at) VALUES('retry','device','{}',?,?,?)",
+      )
+      .run(now, now + 60000, now);
+    await drainPush(env);
+    const first = sqlite.prepare("SELECT * FROM push_outbox").get()!;
+    expect(first.status).toBe("pending");
+    expect(first.first_attempt_at).toEqual(expect.any(Number));
+    expect(first.accepted_at).toBeNull();
+    expect(String(first.receipt_token)).toHaveLength(72);
+    expect(Number(first.next_attempt)).toBeGreaterThan(Date.now());
+    sqlite.exec("UPDATE push_outbox SET next_attempt=0");
+    await drainPush(env);
+    const second = sqlite.prepare("SELECT * FROM push_outbox").get()!;
+    expect(second).toMatchObject({
+      status: "accepted",
+      attempts: 2,
+      first_attempt_at: first.first_attempt_at,
+      receipt_token: first.receipt_token,
+      queued_at: now,
+    });
+    expect(Number(second.accepted_at)).toBeGreaterThanOrEqual(
+      Number(second.last_attempt_at),
+    );
+    expect(
+      Number(new Headers(send.mock.calls[1][1].headers).get("ttl")),
+    ).toBeLessThanOrEqual(60);
+  } finally {
+    sqlite.close();
+  }
+});

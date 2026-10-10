@@ -72,14 +72,62 @@ self.addEventListener("push", (event) => {
   try {
     Object.assign(data, event.data.json());
   } catch {}
+  const receivedAt = Date.now();
   event.waitUntil(
-    self.registration.showNotification(data.title, {
-      body: data.body,
-      icon: "/icon-192.png",
-      badge: "/icon-192.png",
-      tag: data.tag,
-      data: { url: data.url },
-    }),
+    (async () => {
+      let shownAt = null;
+      try {
+        await self.registration.showNotification(data.title, {
+          body: data.body,
+          icon: "/icon-192.png",
+          badge: "/icon-192.png",
+          tag: data.tag,
+          data: { url: data.url },
+        });
+        shownAt = Date.now();
+      } finally {
+        // Showing the notification always comes first. A missing receipt does not
+        // prove delivery failed; this best-effort callback can itself be offline.
+        const tasks = [
+          self.clients
+            .matchAll({ type: "window" })
+            .then((windows) => {
+              for (const client of windows)
+                client.postMessage({ type: "istmo:report" });
+            })
+            .catch(() => {}),
+        ];
+        if (data.delivery?.id && data.delivery?.token) {
+          const ua = self.navigator.userAgent;
+          const deviceKind =
+            /iPhone|iPad|iPod/.test(ua) ||
+            (self.navigator.platform === "MacIntel" &&
+              self.navigator.maxTouchPoints > 1)
+              ? "ios"
+              : /Android/.test(ua)
+                ? "android"
+                : /Macintosh/.test(ua)
+                  ? "mac"
+                  : /Windows/.test(ua)
+                    ? "windows"
+                    : "other";
+          tasks.push(
+            fetch("/api/push/receipt", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                ...data.delivery,
+                receivedAt,
+                shownAt,
+                deviceKind,
+              }),
+              signal: AbortSignal.timeout(5000),
+            }).catch(() => {}),
+          );
+        }
+        await Promise.all(tasks);
+      }
+    })(),
   );
 });
 self.addEventListener("notificationclick", (event) => {

@@ -7,7 +7,7 @@ import {
 } from "./catalog";
 import type { Env } from "./env";
 import { parseUP, parseUSGS, type ParsedReport } from "./parsers";
-import { enqueueReport } from "./push";
+import { reportNotification } from "./push";
 export const sourceUrls = {
   up: "https://sismosgeociencias.up.ac.pa/",
   usgs: "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson",
@@ -50,7 +50,6 @@ export async function storeReports(
           withdrawn: [],
         };
   const writes: D1PreparedStatement[] = [];
-  const changed: { report: ParsedReport; id: string }[] = [];
   for (const { report: r, previous } of plan.rows) {
     const id = previous?.id ?? `${source}:${r.source_id}`;
     const fingerprint = await digest(JSON.stringify(r));
@@ -96,8 +95,10 @@ export async function storeReports(
     if (
       !previous &&
       newReportTime(r, sourceState?.last_success ?? null, now) !== null
-    )
-      changed.push({ report: r, id });
+    ) {
+      const notification = reportNotification(env, r, id, now);
+      if (notification) writes.push(notification);
+    }
   }
   // Upserts and withdrawals commit together, so the API never sees both versions.
   for (const p of plan.withdrawn)
@@ -108,7 +109,6 @@ export async function storeReports(
       ),
     );
   if (writes.length) await env.DB.batch(writes);
-  for (const { report, id } of changed) await enqueueReport(env, report, id);
   await env.DB.prepare(
     "UPDATE sources SET last_attempt=?,last_success=?,error=NULL,report_count=? WHERE id=?",
   )

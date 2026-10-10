@@ -7,6 +7,7 @@ import family from "./family";
 import push, { drainPush } from "./push";
 import { health, maintain } from "./health";
 import { collect } from "./collect";
+import { collectAndDeliver } from "./dispatch";
 import { digest } from "./crypto";
 export { StationRelay } from "./relay";
 const app = new Hono<{ Bindings: Env }>();
@@ -279,8 +280,7 @@ export default {
     ctx.waitUntil(
       (async () => {
         try {
-          await Promise.allSettled([collect(env, "up"), collect(env, "usgs")]);
-          await drainPush(env);
+          await collectAndDeliver(env);
         } finally {
           await maintain(env);
         }

@@ -43,10 +43,16 @@ export function subscribeReports(
   const resume = () => {
     if (!document.hidden) void current.refresh().catch(() => {});
   };
+  const pushed = (event: MessageEvent) => {
+    if (event.data?.type === "istmo:report")
+      void current.refresh().catch(() => {});
+  };
+  navigator.serviceWorker?.addEventListener("message", pushed);
   document.addEventListener("visibilitychange", resume);
   window.addEventListener("online", resume);
   return () => {
     unsubscribe();
+    navigator.serviceWorker?.removeEventListener("message", pushed);
     document.removeEventListener("visibilitychange", resume);
     window.removeEventListener("online", resume);
     if (!current.size) feeds.delete(key);

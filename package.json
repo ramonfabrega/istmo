@@ -22,7 +22,8 @@
     "deploy:production": "bun run db:migrate:production && wrangler deploy --config dist/istmo/wrangler.json",
     "bench:miniseed": "node --import tsx scripts/bench-miniseed.ts",
     "viewers": "node --import tsx scripts/viewers.ts",
-    "test:load": "node --import tsx scripts/load-test.ts"
+    "test:load": "node --import tsx scripts/load-test.ts",
+    "delivery": "node --import tsx scripts/delivery.ts"
   },
   "dependencies": {
     "@block65/webcrypto-web-push": "^2.0.0",

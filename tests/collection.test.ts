@@ -214,3 +214,42 @@ it("does not infer identity for the much larger archived David/Tonosí change", 
     sqlite.close();
   }
 });
+
+it("rolls back report ingestion if notification enqueue fails, so the next poll can retry", async () => {
+  vi.useFakeTimers();
+  const now = Date.parse("2026-10-10T05:00:00Z");
+  vi.setSystemTime(now);
+  const { sqlite, env } = database();
+  try {
+    sqlite
+      .prepare("UPDATE sources SET last_success=? WHERE id='up'")
+      .run(now - 60000);
+    sqlite
+      .prepare(
+        "INSERT INTO push_subscriptions(id,token_hash,subscription,source,min_magnitude,created_at) VALUES('test','test','{}','up',0,?)",
+      )
+      .run(now);
+    sqlite.exec(
+      "CREATE TRIGGER reject_push BEFORE INSERT ON push_outbox BEGIN SELECT RAISE(ABORT,'queue unavailable'); END",
+    );
+    await expect(storeReports(env, "up", html([now - 30000]))).rejects.toThrow(
+      "queue unavailable",
+    );
+    expect(sqlite.prepare("SELECT count(*) AS n FROM reports").get()?.n).toBe(
+      0,
+    );
+    expect(
+      sqlite.prepare("SELECT count(*) AS n FROM report_revisions").get()?.n,
+    ).toBe(0);
+    sqlite.exec("DROP TRIGGER reject_push");
+    await storeReports(env, "up", html([now - 30000]));
+    expect(sqlite.prepare("SELECT count(*) AS n FROM reports").get()?.n).toBe(
+      1,
+    );
+    expect(
+      sqlite.prepare("SELECT count(*) AS n FROM push_outbox").get()?.n,
+    ).toBe(1);
+  } finally {
+    sqlite.close();
+  }
+});
