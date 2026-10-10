@@ -1,3 +1,5 @@
+import { publicSnapshot } from "./public-cache";
+export { ViewerPresence } from "./presence";
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import type { Env } from "./env";
@@ -30,9 +32,17 @@ app.use("/api/*", async (c, next) => {
 });
 app.use("/api/*", async (c, next) => {
   if (c.env.APP_ENV !== "production") return next();
-  const limiter = ["GET", "HEAD"].includes(c.req.method)
-    ? c.env.API_READ_LIMIT
-    : c.env.API_WRITE_LIMIT;
+  const publicRead =
+    ["GET", "HEAD"].includes(c.req.method) &&
+    ["/api/reports", "/api/stations"].includes(c.req.path);
+  const limiter =
+    c.req.path === "/api/presence"
+      ? c.env.API_PRESENCE_LIMIT
+      : publicRead
+        ? c.env.API_PUBLIC_READ_LIMIT
+        : ["GET", "HEAD"].includes(c.req.method)
+          ? c.env.API_READ_LIMIT
+          : c.env.API_WRITE_LIMIT;
   if (!limiter)
     return c.json({ error: "Service temporarily unavailable" }, 503);
   const { success } = await limiter.limit({
@@ -62,14 +72,30 @@ app.get("/api/reports", async (c) => {
   if (scope !== "world")
     query += " AND latitude BETWEEN 5 AND 11 AND longitude BETWEEN -84 AND -76";
   query += " ORDER BY occurred_at DESC LIMIT 1000";
-  return c.json({
-    reports: (
-      await c.env.DB.prepare(query)
-        .bind(...args)
-        .all()
-    ).results,
-    sources: (await c.env.DB.prepare("SELECT * FROM sources").all()).results,
-  });
+  const key = new URL(c.req.url);
+  key.search = new URLSearchParams({
+    hours: String(hours),
+    magnitude: String(mag),
+    scope: scope === "world" ? "world" : "panama",
+  }).toString();
+  return publicSnapshot(
+    key.href,
+    await caches.open("istmo-public-v1"),
+    async (generatedAt) => {
+      args[0] = generatedAt - hours * 3600000;
+      const [reports, sources] = await Promise.all([
+        c.env.DB.prepare(query)
+          .bind(...args)
+          .all(),
+        c.env.DB.prepare("SELECT * FROM sources").all(),
+      ]);
+      return {
+        reports: reports.results,
+        sources: sources.results,
+        generatedAt,
+      };
+    },
+  );
 });
 app.get("/api/reports/:id/revisions", async (c) =>
   c.json(
@@ -83,14 +109,50 @@ app.get("/api/reports/:id/revisions", async (c) =>
   ),
 );
 app.get("/api/stations", async (c) =>
-  c.json(
-    (
-      await c.env.DB.prepare(
-        "SELECT id,name,latitude,longitude,mode,description,last_received,last_sample FROM stations",
-      ).all()
-    ).results,
+  publicSnapshot(
+    new URL("/api/stations", c.req.url).href,
+    await caches.open("istmo-public-v1"),
+    async () =>
+      (
+        await c.env.DB.prepare(
+          "SELECT id,name,latitude,longitude,mode,description,last_received,last_sample FROM stations",
+        ).all()
+      ).results,
   ),
 );
+app.post("/api/presence", async (c) => {
+  const body = await c.req.text();
+  if (body.length > 100) return c.json({ error: "Invalid session" }, 400);
+  let id: unknown;
+  try {
+    id = JSON.parse(body).id;
+  } catch {
+    return c.json({ error: "Invalid session" }, 400);
+  }
+  if (
+    typeof id !== "string" ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      id,
+    )
+  )
+    return c.json({ error: "Invalid session" }, 400);
+  return c.env.VIEWERS.get(c.env.VIEWERS.idFromName("active")).fetch(
+    new Request("https://presence/", {
+      method: "POST",
+      body: JSON.stringify({ id }),
+    }),
+  );
+});
+app.get("/api/admin/viewers", (c) => {
+  if (
+    !c.env.ADMIN_TOKEN ||
+    c.req.header("Authorization") !== `Bearer ${c.env.ADMIN_TOKEN}`
+  )
+    return c.json({ error: "Admin authentication required" }, 401);
+  return c.env.VIEWERS.get(c.env.VIEWERS.idFromName("active")).fetch(
+    "https://presence/",
+  );
+});
 app.get("/api/stations/:id/stream", async (c) => {
   const station = await c.env.DB.prepare("SELECT id FROM stations WHERE id=?")
     .bind(c.req.param("id"))

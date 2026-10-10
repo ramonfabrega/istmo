@@ -1,3 +1,9 @@
+import { useViewerPresence } from "./presence";
+import {
+  subscribeReports,
+  refreshReports,
+  type ReportSnapshot,
+} from "./report-feed";
 import { t, useLocale, setLocale, type Locale } from "./i18n";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -37,6 +43,7 @@ const demoMode =
 
 type View = "observatory" | "people" | "sources";
 export default function App() {
+  useViewerPresence();
   const locale = useLocale();
   const sound = useReportSound();
   const push = usePushNotifications();
@@ -125,34 +132,59 @@ export default function App() {
     setActivityOpen(false);
     setFocusRequest({ report, nonce: Date.now() });
   };
+  const query = { hours, magnitude, scope };
+  const receiveReports = (result: ReportSnapshot) => {
+    setReports(result.reports);
+    setSources(result.sources);
+    safeWrite("istmo-reports", result.reports);
+    safeWrite("istmo-sources", result.sources);
+    setOffline(false);
+    setError("");
+    setBusy(false);
+  };
+  const reportError = () => {
+    setOffline(true);
+    setError(t("Connection unavailable. Showing saved reports."));
+    setBusy(false);
+  };
   const refresh = async () => {
     setBusy(true);
     try {
-      const [result, s] = await Promise.all([
-        api<{ reports: Report[]; sources: Source[] }>(
-          `/api/reports?hours=${hours}&magnitude=${magnitude}&scope=${scope}`,
-        ),
-        api<Station[]>("/api/stations"),
-      ]);
-      setReports(result.reports);
-      setSources(result.sources);
-      setStations(s);
-      safeWrite("istmo-reports", result.reports);
-      safeWrite("istmo-sources", result.sources);
-      setOffline(false);
-      setError("");
+      await refreshReports(query);
     } catch {
-      setOffline(true);
-      setError(t("Connection unavailable. Showing saved reports."));
-    } finally {
-      setBusy(false);
+      /* Subscription shows the error. */
     }
   };
   useEffect(() => {
-    void refresh();
-    const t = setInterval(() => void refresh(), 30000);
-    return () => clearInterval(t);
+    setBusy(true);
+    return subscribeReports(query, receiveReports, reportError);
   }, [hours, magnitude, scope]);
+  useEffect(() => {
+    let active = true;
+    let pending = false;
+    const refreshStations = async () => {
+      if (document.hidden || pending) return;
+      pending = true;
+      try {
+        const next = await api<Station[]>("/api/stations", {
+          signal: AbortSignal.timeout(10000),
+        });
+        if (active) setStations(next);
+      } catch {
+        /* Reports own the connection indicator. */
+      } finally {
+        pending = false;
+      }
+    };
+    void refreshStations();
+    const timer = setInterval(() => void refreshStations(), 60000);
+    document.addEventListener("visibilitychange", refreshStations);
+    return () => {
+      active = false;
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", refreshStations);
+    };
+  }, []);
   useEffect(() => {
     const t = setInterval(() => setClock(Date.now()), 1000);
     return () => clearInterval(t);
@@ -769,6 +801,11 @@ export default function App() {
             <p>
               {t(
                 "To install on your phone, open Istmo in Safari or Chrome and add it to your Home Screen. Enable notifications from the bell to receive reports when the app is closed.",
+              )}
+            </p>
+            <p>
+              {t(
+                "An anonymous, temporary session heartbeat helps us estimate active viewers. It includes no identity or location and expires after 90 seconds of inactivity.",
               )}
             </p>
             <InstallButton />

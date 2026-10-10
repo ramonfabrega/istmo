@@ -1,9 +1,9 @@
 import fs from "node:fs";
-export function config() {
-  const vars = fs.existsSync(".dev.vars")
+export function config(file = ".dev.vars") {
+  const vars = fs.existsSync(file)
     ? Object.fromEntries(
         fs
-          .readFileSync(".dev.vars", "utf8")
+          .readFileSync(file, "utf8")
           .split("\n")
           .filter((x) => x.includes("="))
           .map((x) => {

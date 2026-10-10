@@ -58,3 +58,29 @@ describe("magnitude chime bands", () => {
     expect(magnitudeBand(9.5).frequency).toBe(magnitudeBand(6.5).frequency);
   });
 });
+
+it("does not lose a report collected between snapshot generation and receipt", () => {
+  const generatedAt = now - 5000;
+  const receivedAt = now;
+  const collected = report({ new_report_at: generatedAt + 1000 });
+  expect(
+    newAudibleReports(
+      [collected],
+      new Set(),
+      generatedAt,
+      receivedAt + 15000,
+      "up",
+      3,
+    ),
+  ).toEqual([collected]);
+  expect(
+    newAudibleReports(
+      [collected],
+      new Set([collected.id]),
+      generatedAt,
+      receivedAt + 15000,
+      "up",
+      3,
+    ),
+  ).toEqual([]);
+});

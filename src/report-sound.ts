@@ -1,7 +1,8 @@
+import { subscribeReports, DEFAULT_REPORT_QUERY } from "./report-feed";
 import { t } from "./i18n";
 import { useEffect, useRef, useState } from "react";
 import type { Report } from "../shared/types";
-import { api, safeRead, safeWrite } from "./api";
+import { safeRead, safeWrite } from "./api";
 
 export function newAudibleReports(
   reports: Report[],
@@ -194,29 +195,22 @@ export function useReportSound() {
   }, [source, magnitude, mode]);
   useEffect(() => {
     if (!enabled) return;
-    let active = true;
-    let inFlight = false;
     let initialized = false;
     let since = Date.now();
     const seen = new Set<string>();
-    const poll = async () => {
-      if (inFlight) return;
-      inFlight = true;
-      const started = Date.now();
-      try {
-        const result = await api<{ reports: Report[] }>(
-          "/api/reports?hours=1&magnitude=0&scope=panama",
-        );
-        if (!active) return;
+    return subscribeReports(
+      DEFAULT_REPORT_QUERY,
+      (result) => {
+        const now = Date.now();
         const fresh = newAudibleReports(
           result.reports,
           seen,
           since,
-          started,
+          now,
           prefs.current.source,
           prefs.current.magnitude,
         );
-        // First response is a baseline, never an audible backlog. Revisions retain IDs.
+        // Snapshot time, not receipt time: cache delay must not create gaps.
         if (initialized && fresh.length) {
           const strongest = Math.max(...fresh.map((r) => r.magnitude));
           if (chime(strongest))
@@ -226,28 +220,15 @@ export function useReportSound() {
                 { count: fresh.length, magnitude: strongest.toFixed(1) },
               ),
             );
-          else
-            setMessage(
-              t(
-                "Audio was paused by your browser. Tap Test sound to resume it.",
-              ),
-            );
         }
+        seen.clear();
         result.reports.forEach((r) => seen.add(r.id));
-        since = started;
+        since = result.generatedAt ?? now;
         initialized = true;
-      } catch {
-        /* The main connection indicator covers temporary outages. */
-      } finally {
-        inFlight = false;
-      }
-    };
-    void poll();
-    const timer = setInterval(() => void poll(), 30000);
-    return () => {
-      active = false;
-      clearInterval(timer);
-    };
+      },
+      () => {},
+      true,
+    );
   }, [enabled]);
   useEffect(
     () => () => {

@@ -4,7 +4,7 @@
 
 A Panama-first earthquake observatory: live agency reports on an interactive globe, private circles for family check-ins, and a path to real station readings.
 
-- **Observe:** UP and USGS reports with magnitude, depth, origin time, revisions and source freshness. Collected every minute; the app refreshes every 30 seconds.
+- **Observe:** UP and USGS reports with magnitude, depth, origin time, revisions and source freshness. Collected every minute; active apps refresh every 15 seconds through a five-second public cache.
 - **Stay informed:** optional sound while the app is open and device notifications while it is closed.
 - **Your people:** persistent circles, attributed check-ins, optional location snapshots and gathering places on the main map.
 
@@ -42,3 +42,5 @@ Production runs on Cloudflare Workers, D1, R2 and Durable Objects. Git pushes to
 - [Deployment](docs/deployment.md)
 
 Next: verify background push on real devices, add owner recovery/new-device linking, and connect calibrated hardware with batched archive storage.
+
+See [capacity and freshness](docs/scaling.md) for load-test results and the private active-viewer command.

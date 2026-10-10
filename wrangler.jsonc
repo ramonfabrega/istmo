@@ -22,9 +22,15 @@
     { "binding": "ARCHIVE", "bucket_name": "istmo-local-archive" },
   ],
   "durable_objects": {
-    "bindings": [{ "name": "STATIONS", "class_name": "StationRelay" }],
+    "bindings": [
+      { "name": "STATIONS", "class_name": "StationRelay" },
+      { "name": "VIEWERS", "class_name": "ViewerPresence" },
+    ],
   },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["StationRelay"] }],
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["StationRelay"] },
+    { "tag": "v2", "new_sqlite_classes": ["ViewerPresence"] },
+  ],
   "triggers": { "crons": ["* * * * *"] },
   "env": {
     "production": {
@@ -47,9 +53,22 @@
         { "binding": "ARCHIVE", "bucket_name": "istmo-production-archive" },
       ],
       "durable_objects": {
-        "bindings": [{ "name": "STATIONS", "class_name": "StationRelay" }],
+        "bindings": [
+          { "name": "STATIONS", "class_name": "StationRelay" },
+          { "name": "VIEWERS", "class_name": "ViewerPresence" },
+        ],
       },
       "ratelimits": [
+        {
+          "name": "API_PUBLIC_READ_LIMIT",
+          "namespace_id": "179161004",
+          "simple": { "limit": 6000, "period": 60 },
+        },
+        {
+          "name": "API_PRESENCE_LIMIT",
+          "namespace_id": "179161003",
+          "simple": { "limit": 3000, "period": 60 },
+        },
         {
           "name": "API_READ_LIMIT",
           "namespace_id": "179161001",

@@ -7,7 +7,7 @@ Public URL: https://istmo.ramonfabrega.com
 - D1: `istmo-production`, `b3a52b8d-f0f5-4742-938d-7dca734ad446`.
 - Private R2: `istmo-production-archive`; `sources/` objects expire after 30 days.
 - Cron: every minute. UP and USGS failures are recorded independently in `sources`.
-- API rate limits: 300 reads and 60 writes per IP per minute at each Cloudflare location. These are abuse controls, not exact account-wide quotas.
+- API rate limits: 6,000 public catalog reads, 3,000 presence heartbeats, 300 other reads and 60 other writes per IP per minute at each Cloudflare location. These are abuse controls, not exact account-wide quotas.
 - Worker logs enabled at 10% sampling. No request bodies or credentials are intentionally logged.
 - No production station is provisioned. A physical station needs an individual ingest token, calibration and archive batching before sustained use.
 
@@ -52,3 +52,5 @@ Cron attempts both sources independently and drains notifications even when a so
 Maintenance expires unsent records and deletes accepted/expired outbox records seven days after expiry. It does not delete subscriptions, earthquake revisions, circles or check-ins. Health transitions produce structured `health_transition` logs without payloads or device identifiers; Cloudflare log sampling still applies. The public endpoint is suitable for an external uptime monitor. External paging is not configured; a stopped scheduler cannot report its own outage through cron logs.
 
 Migration 0009 is additive and runs before deployment. Older subscriptions default to English until a client saves its language. Local `dev:all` uses the collector process rather than cron, so scheduler health may show stale locally.
+
+Private active viewers are available through `bun run viewers --production`. The `ViewerPresence` Durable Object is created by Wrangler migration `v2`; it stores only expiring in-memory session IDs. See [scaling and freshness](scaling.md) for cache behavior, rate limits, and test results.

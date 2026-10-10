@@ -41,7 +41,7 @@ A source-specific D1 lease prevents overlapping collection runs. Fingerprints ar
 
 Raw HTML/JSON and normalized revisions are archived. An upstream error leaves the last good data available with an error/freshness indicator. UP's timestamps are interpreted in Panama UTC−5. All storage/API timestamps are UTC epoch milliseconds; the UI formats Panama time.
 
-The collector is intended to have one scheduler. Concurrent forced collections for the same source are not yet serialized; before multiple collectors are enabled, add a source lock or a dedicated collector Durable Object. Report deletion/retraction reconciliation is also not implemented: disappearance from a rolling feed alone is insufficient evidence of retraction.
+Public catalog reads use five-second edge snapshots, with one shared client poll for the map and sound where their queries match. See [capacity and freshness](scaling.md) for latency budgets, the private active-session estimate, and measured local load results.
 
 ## Stream reliability
 

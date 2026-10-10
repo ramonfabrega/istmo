@@ -1,9 +1,12 @@
 export interface Env {
   DB: D1Database;
   ARCHIVE: R2Bucket;
+  VIEWERS: DurableObjectNamespace;
+  API_PRESENCE_LIMIT?: RateLimit;
   STATIONS: DurableObjectNamespace;
   APP_ENV: string;
   API_READ_LIMIT?: RateLimit;
+  API_PUBLIC_READ_LIMIT?: RateLimit;
   API_WRITE_LIMIT?: RateLimit;
   INGEST_TOKEN?: string;
   ADMIN_TOKEN?: string;

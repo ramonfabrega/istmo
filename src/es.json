@@ -377,5 +377,6 @@
   "{count} recently expired after attempts": "{count} vencidas recientemente tras intentar envío",
   "Provider acceptance does not confirm display on the device.": "La aceptación del proveedor no confirma que el dispositivo mostró el aviso.",
   "Sound": "Sonido",
-  "Sound is remembered. Tap anywhere in Istmo to resume audio.": "Tu preferencia está guardada. Toca en cualquier parte de Istmo para reanudar el audio."
+  "Sound is remembered. Tap anywhere in Istmo to resume audio.": "Tu preferencia está guardada. Toca en cualquier parte de Istmo para reanudar el audio.",
+  "An anonymous, temporary session heartbeat helps us estimate active viewers. It includes no identity or location and expires after 90 seconds of inactivity.": "Una señal anónima y temporal de sesión nos ayuda a estimar cuántas personas tienen la app abierta. No incluye identidad ni ubicación y vence tras 90 segundos de inactividad."
 }
