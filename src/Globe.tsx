@@ -1,3 +1,4 @@
+import { recordTiming } from "./performance";
 import { t, useLocale } from "./i18n";
 import { useEffect, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
@@ -508,6 +509,7 @@ export default function Globe({
   useEffect(() => {
     const m = map.current;
     if (!ready || !m) return;
+    const preparedAt = performance.now();
     const fresh = reports.filter((r) => isFreshReport(r, freshClock));
     const ids = new Set(fresh.map((r) => r.id));
     const data = pointCollection(reports.filter((r) => !ids.has(r.id)));
@@ -562,6 +564,7 @@ export default function Globe({
       }
     }
     layoutFreshMarkers();
+    recordTiming("reports.map_prepare", preparedAt, { count: reports.length });
   }, [reports, freshClock, ready, locale]);
   useEffect(() => {
     const m = map.current;

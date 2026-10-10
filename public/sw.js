@@ -93,7 +93,10 @@ self.addEventListener("push", (event) => {
             .matchAll({ type: "window" })
             .then((windows) => {
               for (const client of windows)
-                client.postMessage({ type: "istmo:report" });
+                client.postMessage({
+                  type: "istmo:report",
+                  after: data.delivery?.catalogAfter || 0,
+                });
             })
             .catch(() => {}),
         ];

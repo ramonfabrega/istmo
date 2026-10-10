@@ -71,7 +71,11 @@ async function deliver(env: Env, job: PushJob) {
       {
         data: JSON.stringify({
           ...JSON.parse(job.payload),
-          delivery: { id: job.id, token: acquired.receipt_token },
+          delivery: {
+            id: job.id,
+            token: acquired.receipt_token,
+            catalogAfter: now,
+          },
         }),
         options: { ttl, urgency: "high" },
       },

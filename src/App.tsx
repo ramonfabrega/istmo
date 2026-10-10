@@ -1,3 +1,4 @@
+import { recordTiming } from "./performance";
 import { useViewerPresence } from "./presence";
 import {
   subscribeReports,
@@ -5,7 +6,7 @@ import {
   type ReportSnapshot,
 } from "./report-feed";
 import { t, useLocale, setLocale, type Locale } from "./i18n";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
   Bell,
@@ -133,7 +134,9 @@ export default function App() {
     setFocusRequest({ report, nonce: Date.now() });
   };
   const query = { hours, magnitude, scope };
+  const receivedAt = useRef<number | null>(null);
   const receiveReports = (result: ReportSnapshot) => {
+    receivedAt.current = performance.now();
     setReports(result.reports);
     setSources(result.sources);
     safeWrite("istmo-reports", result.reports);
@@ -142,6 +145,14 @@ export default function App() {
     setError("");
     setBusy(false);
   };
+  useEffect(() => {
+    if (receivedAt.current !== null) {
+      recordTiming("reports.commit", receivedAt.current, {
+        count: reports.length,
+      });
+      receivedAt.current = null;
+    }
+  }, [reports]);
   const reportError = () => {
     setOffline(true);
     setError(t("Connection unavailable. Showing saved reports."));

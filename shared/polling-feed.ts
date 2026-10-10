@@ -8,6 +8,7 @@ export class PollingFeed<T> {
   private pending: Promise<T> | null = null;
   private timer?: ReturnType<typeof setInterval>;
   private latest?: T;
+  private invalidated = false;
   constructor(
     private load: () => Promise<T>,
     private visible: () => boolean,
@@ -40,23 +41,31 @@ export class PollingFeed<T> {
       }
     };
   }
-  refresh(): Promise<T> {
+  refresh(fresh = false): Promise<T> {
+    if (fresh) this.invalidated = true;
     if (this.pending) return this.pending;
-    this.pending = this.load()
-      .then(
-        (value) => {
-          this.latest = value;
-          this.listeners.forEach((l) => l.data(value));
-          return value;
-        },
-        (error) => {
-          this.listeners.forEach((l) => l.error(error));
-          throw error;
-        },
-      )
-      .finally(() => {
-        this.pending = null;
-      });
+    this.pending = this.loadLatest().finally(() => {
+      this.pending = null;
+    });
     return this.pending;
+  }
+  private async loadLatest(): Promise<T> {
+    for (;;) {
+      this.invalidated = false;
+      let value: T;
+      try {
+        value = await this.load();
+      } catch (error) {
+        if (this.invalidated) continue;
+        this.listeners.forEach((listener) => listener.error(error));
+        throw error;
+      }
+      // A push/resume arriving during a request invalidates its result. Share
+      // one immediate follow-up instead of waiting another polling interval.
+      if (this.invalidated) continue;
+      this.latest = value;
+      this.listeners.forEach((listener) => listener.data(value));
+      return value;
+    }
   }
 }

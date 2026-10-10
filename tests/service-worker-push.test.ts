@@ -65,7 +65,10 @@ it("displays first, then acknowledges receipt and refreshes open clients without
     receivedAt: expect.any(Number),
     shownAt: expect.any(Number),
   });
-  expect(w.postMessage).toHaveBeenCalledWith({ type: "istmo:report" });
+  expect(w.postMessage).toHaveBeenCalledWith({
+    type: "istmo:report",
+    after: 0,
+  });
   expect(JSON.stringify(w.showNotification.mock.calls)).not.toContain("secret");
 });
 it("does not lose notifications when the receipt callback is offline, and supports old payloads", async () => {

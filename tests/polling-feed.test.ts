@@ -49,3 +49,29 @@ it("does not deliver a superseded filter request after unsubscribe and retries e
   await expect(failed.refresh()).rejects.toThrow("offline");
   await expect(failed.refresh()).resolves.toBe(2);
 });
+
+it("fetches again immediately when invalidated during an older request, without publishing stale data", async () => {
+  let release!: (value: number) => void;
+  const load = vi
+    .fn()
+    .mockImplementationOnce(
+      () =>
+        new Promise<number>((resolve) => {
+          release = resolve;
+        }),
+    )
+    .mockResolvedValue(2);
+  const feed = new PollingFeed<number>(load, () => true);
+  const data = vi.fn();
+  const off = feed.subscribe(data, vi.fn());
+  try {
+    const fresh = feed.refresh(true);
+    const duplicate = feed.refresh(true);
+    release(1);
+    await Promise.all([fresh, duplicate]);
+    expect(load).toHaveBeenCalledTimes(2);
+    expect(data.mock.calls).toEqual([[2]]);
+  } finally {
+    off();
+  }
+});

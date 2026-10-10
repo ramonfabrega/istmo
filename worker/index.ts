@@ -96,6 +96,14 @@ app.get("/api/reports", async (c) => {
         generatedAt,
       };
     },
+    // A push carries a server timestamp after the report transaction. Resume
+    // and manual refresh ask for a snapshot started in this request instead.
+    c.req.query("fresh") === "1"
+      ? Date.now() - 1
+      : Math.min(
+          Date.now() - 1,
+          Math.max(0, Number(c.req.query("after")) || 0),
+        ),
   );
 });
 app.get("/api/reports/:id/revisions", async (c) =>
