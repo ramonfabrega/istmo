@@ -1,6 +1,6 @@
 # Connecting a station
 
-The included simulator uses recorded samples, not synthesized earthquake-looking noise. Run `npm run replay`; it reads `fixtures/replay.mseed`, loops it with a new session UUID at process start, and uploads one second of samples per second. Its Panama pin is a demo location. The original German waveform and provenance are in `fixtures/`.
+The included simulator uses recorded samples, not synthesized earthquake-looking noise. Run `bun run replay`; it reads `fixtures/replay.mseed`, loops it with a new session UUID at process start, and uploads one second of samples per second. Its Panama pin is a demo location. The original German waveform and provenance are in `fixtures/`.
 
 ## Provision
 

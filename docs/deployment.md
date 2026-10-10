@@ -13,9 +13,9 @@ Public URL: https://istmo.ramonfabrega.com
 
 ## Release
 
-Apply additive migrations with `npm run db:migrate:production`. Run unit and local integration checks, then `npm run deploy`. The build must use `CLOUDFLARE_ENV=production`; the generated `dist/istmo/wrangler.json` must have `APP_ENV=production` and the production D1 ID. Deploying a local build is not safe. `dist/client` is the only public asset directory.
+Run unit and local integration checks, then `bun run deploy`. This builds first, applies pending production migrations, and deploys the Worker only if migrations succeed. Wrangler records applied migrations; subsequent deploys skip them. Use additive, backward-compatible migrations: the old Worker remains live while the database changes, and a failed Worker deployment does not undo a completed migration. The build must use `CLOUDFLARE_ENV=production`; the generated `dist/istmo/wrangler.json` must have `APP_ENV=production` and the production D1 ID. Deploying a local build is not safe. `dist/client` is the only public asset directory.
 
-Secrets are uploaded separately with `npx wrangler secret bulk .dev.vars.production --env production`. The private file is gitignored and must be backed up securely. Neither it nor `dist/istmo/.dev.vars` belongs in a public upload. Existing push subscriptions require the same VAPID key pair.
+Secrets are uploaded separately with `bunx wrangler secret bulk .dev.vars.production --env production`. The private file is gitignored and must be backed up securely. Neither it nor `dist/istmo/.dev.vars` belongs in a public upload. Existing push subscriptions require the same VAPID key pair.
 
 ## Verification
 
@@ -35,9 +35,11 @@ For a regression, redeploy a known previous Worker version through Cloudflare's 
 
 Connect the public `ramonfabrega/istmo` repository to the existing **istmo** Worker, with production branch `main` and repository root `/`.
 
-- Build command: `npm run build:production`
-- Deploy command: `npm run db:migrate:production && npx wrangler deploy --config dist/istmo/wrangler.json`
-- Node.js: 24 (the SQLite regression test requires modern Node).
+- Build command: `bun run build:production`
+- Deploy command: `bun run deploy:production`
+- Build environment variables: `BUN_VERSION=1.3.10`, `NODE_VERSION=24`.
+- `bun.lock` selects Bun installation. Commit only this lockfile; use `bun install --frozen-lockfile` for reproducible installs.
+- Use `bun run test`, not `bun test`: the suite uses Vitest on Node, including `node:sqlite`.
 
 The Cloudflare build token needs permission to deploy this Worker and apply D1 migrations. Existing runtime secrets stay on the Worker; do not add `.dev.vars.production` to Git or upload those secrets as public build variables. No VAPID/private keys are needed to compile the app. Keep preview branches from deploying to production until a separate preview environment is configured.
 

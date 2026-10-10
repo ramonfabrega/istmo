@@ -9,7 +9,7 @@
     "test": "vitest run",
     "db:migrate": "wrangler d1 migrations apply istmo-local --local",
     "db:seed": "wrangler d1 execute istmo-local --local --file scripts/seed.sql",
-    "setup": "node --import tsx scripts/init.ts && npm run db:migrate && npm run db:seed",
+    "setup": "node --import tsx scripts/init.ts && bun run db:migrate && bun run db:seed",
     "replay": "tsx scripts/replay.ts",
     "collect": "tsx scripts/collect.ts",
     "test:integration": "tsx scripts/integration.ts",
@@ -17,8 +17,9 @@
     "format": "prettier --write src worker shared scripts tests *.json *.ts *.jsonc",
     "dev:all": "node --import tsx scripts/dev.ts",
     "build:production": "tsc --noEmit && CLOUDFLARE_ENV=production vite build",
-    "db:migrate:production": "wrangler d1 migrations apply istmo-production --env production --remote",
-    "deploy": "npm run build:production && wrangler deploy --config dist/istmo/wrangler.json"
+    "db:migrate:production": "wrangler d1 migrations apply DB --config wrangler.jsonc --env production --remote",
+    "deploy": "bun run build:production && bun run deploy:production",
+    "deploy:production": "bun run db:migrate:production && wrangler deploy --config dist/istmo/wrangler.json"
   },
   "dependencies": {
     "@block65/webcrypto-web-push": "^2.0.0",
@@ -47,5 +48,6 @@
     "vite": "^7.1.0",
     "vitest": "^5.0.3",
     "wrangler": "^4.149.0"
-  }
+  },
+  "packageManager": "bun@1.3.10"
 }

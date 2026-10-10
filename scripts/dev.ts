@@ -33,7 +33,7 @@ for (let i = 0; i < 60 && !stopping; i++) {
     }
   } catch {}
   if (i === 59) {
-    console.error("App did not become ready. Run npm run setup first.");
+    console.error("App did not become ready. Run bun run setup first.");
     stop();
   }
   await new Promise((r) => setTimeout(r, 500));

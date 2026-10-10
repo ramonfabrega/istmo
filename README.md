@@ -6,12 +6,12 @@ The seeded station replays **real recorded German ground motion from 2010** at a
 
 ## Run locally
 
-Requires Node 22.12+ (Node 24 works) and npm. No Cloudflare resources need to be created.
+Requires Node 24 and Bun 1.3.10. Bun manages dependencies and scripts; Vite, Vitest, Wrangler and the development processes still run on Node. No Cloudflare resources need to be created.
 
 ```sh
-npm ci
-npm run setup
-npm run dev:all
+bun install --frozen-lockfile
+bun run setup
+bun run dev:all
 ```
 
 Open http://localhost:5173 or http://studio:5173 from a connected device. `dev:all` runs the app, real-waveform replay, and source collector together. Ctrl-C stops all three. Vite binds to `0.0.0.0`; access depends on your host firewall and network. State persists in `.wrangler/state`, and private local keys are generated in `.dev.vars` (gitignored). Never serve or upload `.dev.vars` or the server build as public assets.
@@ -19,9 +19,9 @@ Open http://localhost:5173 or http://studio:5173 from a connected device. `dev:a
 To run components separately:
 
 ```sh
-npm run dev
-npm run replay
-npm run collect -- --watch
+bun run dev
+bun run replay
+bun run collect --watch
 ```
 
 The local collector polls each source, then waits 60 seconds. The deployed scheduler is configured for every minute; local development needs the collector process. Reports refresh in the UI every 30 seconds. Check-ins refresh every 15 seconds; waveform records arrive over a WebSocket.
@@ -40,26 +40,26 @@ Production builds register an offline service worker automatically. In developme
 
 ### Reset / migrate
 
-`npm run db:migrate` applies new local migrations without resetting data. `npm run setup` is repeatable and seeds the demo station using `INSERT OR IGNORE`.
+`bun run db:migrate` applies new local migrations without resetting data. `bun run setup` is repeatable and seeds the demo station using `INSERT OR IGNORE`.
 
-For a fresh scratch database and archive: stop the dev processes, **move** `.wrangler/state` to a backup folder, then run `npm run setup`. Keep `.dev.vars` if you want the same local keys. Old family sessions no longer identify members of a fresh database; use **Manage → Remove circle from this device** in People and create/join a new circle. This reset affects only local state; no remote flags are used.
+For a fresh scratch database and archive: stop the dev processes, **move** `.wrangler/state` to a backup folder, then run `bun run setup`. Keep `.dev.vars` if you want the same local keys. Old family sessions no longer identify members of a fresh database; use **Manage → Remove circle from this device** in People and create/join a new circle. This reset affects only local state; no remote flags are used.
 
 ## Included
 
 - Panama-centered globe with pan/zoom, world view, magnitude markers, source/time/magnitude filters, report details and revision history. Country boundaries and a few regional city labels are bundled; no map API key or external tile service.
 - University of Panama HTML collector and USGS GeoJSON collector. Raw responses archived, source-specific reports normalized and deduplicated, failures and data age exposed. Reports from two agencies are intentionally not claimed to be two unique earthquakes or automatically merged into one.
 - miniSEED 2 ingestion with per-station credentials, original bytes archived in R2, idempotent sequence handling, and one Durable Object/WebSocket stream per station. Browser decoding, channel selection, 30/60/180-second windows, freeze/resume, and recent record downloads.
-- Real-waveform replay through the same ingestion API. `GAP_EVERY=30 npm run replay` creates deliberate gaps. Replay source timestamps are preserved; display timestamps use the current replay timeline.
+- Real-waveform replay through the same ingestion API. `GAP_EVERY=30 bun run replay` creates deliberate gaps. Replay source timestamps are preserved; display timestamps use the current replay timeline.
 - Private invitation-based circles, timestamped “reported okay / needs help / not confirmed,” independent arrived/left records, reporter attribution, history, and explicit offline pending state. An uncle can report on a grandparent. Names are self-declared; these are family reports, not independent verification.
 - Opt-in Web Push with VAPID, source/magnitude preferences, D1 outbox, bounded retries and expiry. Only recent Panama-region reports qualify; installing does not send a backlog of old earthquakes. One notification per source report per device; revisions remain in the app.
 
 ## Checks
 
 ```sh
-npm test
-npm run build
+bun run test
+bun run build
 # With the local dev app running:
-npm run test:integration
+bun run test:integration
 ```
 
 Unit tests exercise the captured UP table, Panama timestamps, invalid upstream pages, USGS magnitude handling, original miniSEED headers, signed sample encoding and malformed records. Integration checks use disposable circles and the replay station: membership isolation, attribution, duplicate/conflicting submissions, persistent timelines, invitation revocation, self-only location sharing, gathering-place isolation, binary streaming, and byte-exact R2 downloads. No test notification is sent automatically.
@@ -75,13 +75,12 @@ Production uses its own D1 database and private R2 bucket. No local circles, rep
 For updates:
 
 ```sh
-npm test
-npm run test:integration # local dev server only
-npm run db:migrate:production # when migrations change
-npm run deploy # builds with CLOUDFLARE_ENV=production, then deploys that output
+bun run test
+bun run test:integration # local dev server only
+bun run deploy # production build → pending D1 migrations → Worker deploy
 ```
 
-Production secrets live in gitignored `.dev.vars.production` (mode 600) and Cloudflare Worker secrets. Back this file up securely; do not rotate VAPID keys casually because existing device subscriptions depend on them. `npx wrangler secret bulk .dev.vars.production --env production` uploads them. Only `dist/client` is public; the server build includes private preview variables and must never be served as a directory. Do not run local seed/reset scripts against production.
+Production secrets live in gitignored `.dev.vars.production` (mode 600) and Cloudflare Worker secrets. Back this file up securely; do not rotate VAPID keys casually because existing device subscriptions depend on them. `bunx wrangler secret bulk .dev.vars.production --env production` uploads them. Only `dist/client` is public; the server build includes private preview variables and must never be served as a directory. Do not run local seed/reset scripts against production.
 
 See [deployment runbook](docs/deployment.md) for verification and resource details. Next priorities are real-device push delivery, owner recovery/new-device linking, and physical station calibration plus batched waveform storage before continuous cloud ingestion.
 
