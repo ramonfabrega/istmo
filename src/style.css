@@ -3306,7 +3306,7 @@ body {
 [hidden] {
   display: none !important;
 }
-.sidebar,
+.rail,
 .topbar {
   touch-action: none;
 }
